@@ -3,7 +3,6 @@ import 'package:dart_extensions_methods/dart_extension_methods.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:vibration/vibration.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
@@ -89,7 +88,7 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
 
   bool lock = false;
 
-  Future<void> onScan(Future<List<ConnectivityResult>> connectivity, Barcode barcode) async {
+  Future<void> onScan(Future<List<ConnectivityResult>> connectivity, String barcode) async {
     if (lock) {
       return;
     }
@@ -111,7 +110,7 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
     }
   }
 
-  Future<void> _login(Future<List<ConnectivityResult>> connectivity, Barcode barcode) async {
+  Future<void> _login(Future<List<ConnectivityResult>> connectivity, String barcode) async {
     var connectivityResult = await connectivity;
     if (connectivityResult.contains(ConnectivityResult.none)) {
       setState(() {
@@ -120,7 +119,7 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
       return;
     }
 
-    if (barcode.rawValue?.isEmpty ?? true) {
+    if (barcode.isEmpty) {
       getLogger().w("QR-Code is empty");
       setState(() {
         message = "QR-Code ist leer";
@@ -128,9 +127,7 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
       return;
     }
 
-    String barcodeContent = barcode.rawValue!;
-
-    if (!barcodeContent.startsWith("untis://setschool?")) {
+    if (!barcode.startsWith("untis://setschool?")) {
       getLogger().w("QR-Code is not a valid Untis QR-Code");
       setState(() {
         message = "QR-Code ist kein gültiger Untis-QR-Code";
@@ -139,7 +136,7 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
     }
 
     Map<String, String> parameters = {};
-    for (String parameter in barcodeContent.split("?")[1].split("&")) {
+    for (String parameter in barcode.split("?")[1].split("&")) {
       List<String> parameterSplit = parameter.split("=");
       parameters[parameterSplit[0]] = parameterSplit[1];
     }

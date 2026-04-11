@@ -1,26 +1,36 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:your_schedule/util/logger.dart';
+import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 
 class QRCodeScanner extends ConsumerStatefulWidget {
   const QRCodeScanner({required this.onScan, super.key});
 
-  final void Function(Barcode) onScan;
+  final void Function(String) onScan;
 
   @override
   ConsumerState<QRCodeScanner> createState() => _QRCodeScannerState();
 }
 
 class _QRCodeScannerState extends ConsumerState<QRCodeScanner> {
+  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
+
   static bool torchEnabled = false;
   static CameraFacing cameraFacing = CameraFacing.back;
 
-  MobileScannerController cameraController = MobileScannerController(
-    detectionTimeoutMs: 500,
-    torchEnabled: torchEnabled,
-    facing: cameraFacing,
-  );
+  QRViewController? cameraController;
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    // Required hot-reload workaround per package docs
+    if (Platform.isAndroid) {
+      cameraController?.pauseCamera();
+    }
+    cameraController?.resumeCamera();
+  }
 
   @override
   Widget build(BuildContext context) => Column(
@@ -33,15 +43,18 @@ class _QRCodeScannerState extends ConsumerState<QRCodeScanner> {
 
         child: Stack(
           children: [
-            MobileScanner(
-              // fit: BoxFit.contain,
-              controller: cameraController,
-              onDetect: (capture) {
-                final List<Barcode> barcodes = capture.barcodes;
-                for (final barcode in barcodes) {
-                  getLogger().i("Barcode found: ${barcode.rawValue}");
-                  widget.onScan(barcode);
-                }
+            QRView(
+              key: qrKey,
+              onQRViewCreated: (QRViewController p1) {
+                cameraController = p1;
+                cameraController?.scannedDataStream.listen(
+                    (barcode) {
+                      if (barcode.code != null) {
+                        getLogger().i("Barcode found: ${barcode.code}");
+                        widget.onScan(barcode.code!);
+                      }
+                    }
+                );
               },
             ),
 
@@ -51,45 +64,23 @@ class _QRCodeScannerState extends ConsumerState<QRCodeScanner> {
                 children: [
                   IconButton(
                     color: Colors.white,
-                    icon: ValueListenableBuilder(
-                      valueListenable: cameraController,
-                      builder: (context, state, child) {
-                        switch (state.torchState) {
-                          case TorchState.off:
-                          case TorchState.unavailable:
-                            return const Icon(Icons.flash_off, color: Colors.grey);
-                          case TorchState.on:
-                            return const Icon(Icons.flash_on, color: Colors.yellow);
-                          case TorchState.auto:
-                            throw UnimplementedError();
-                        }
-                      },
-                    ),
                     iconSize: 32.0,
+                    icon: torchEnabled
+                        ? const Icon(Icons.flash_on, color: Colors.yellow)
+                        : const Icon(Icons.flash_off, color: Colors.grey),
                     onPressed: () {
-                      cameraController.toggleTorch();
+                      cameraController?.toggleFlash();
                       torchEnabled = !torchEnabled;
                     },
                   ),
                   IconButton(
                     color: Colors.white,
-                    icon: ValueListenableBuilder(
-                      valueListenable: cameraController,
-                      builder: (context, state, child) {
-                        switch (state.cameraDirection) {
-                          case CameraFacing.front:
-                            return const Icon(Icons.camera_front);
-                          case CameraFacing.back:
-                            return const Icon(Icons.camera_rear);
-                          case CameraFacing.external:
-                          case CameraFacing.unknown:
-                            return const Icon(Icons.question_mark);
-                        }
-                      },
-                    ),
                     iconSize: 32.0,
+                    icon: cameraFacing == CameraFacing.back
+                        ? const Icon(Icons.camera_rear)
+                        : const Icon(Icons.camera_front),
                     onPressed: () {
-                      cameraController.switchCamera();
+                      cameraController?.flipCamera();
                       cameraFacing = cameraFacing == CameraFacing.back ? CameraFacing.front : CameraFacing.back;
                     },
                   ),

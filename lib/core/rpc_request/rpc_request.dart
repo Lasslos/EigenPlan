@@ -75,7 +75,7 @@ Future<RPCResponse> rpcRequest({
         'jsonrpc': '2.0',
         'id': id.toString(),
         'method': method,
-        if (params != null) 'params': params,
+        'params': ?params,
       }),
       headers: {
         'Content-Type': 'application/json',
