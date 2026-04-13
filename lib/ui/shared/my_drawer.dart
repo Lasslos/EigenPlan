@@ -5,6 +5,7 @@ import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
 import 'package:your_schedule/ui/screens/login_screen/welcome_screen.dart';
 import 'package:your_schedule/ui/screens/settings_screen/settings_screen.dart';
+import 'package:your_schedule/ui/screens/messages_screen/messages_screen.dart';
 
 class MyDrawer extends ConsumerWidget {
   const MyDrawer({
@@ -43,6 +44,18 @@ class MyDrawer extends ConsumerWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const FilterScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("Nachrichten"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MessagesScreen(),
                 ),
               );
             },
