@@ -1,0 +1,35 @@
+URL: https://herakles.webuntis.com/WebUntis/api/rest/view/v1/messages/0000?school=cjd-k%C3%B6nigswinter // 0000 ist ein platzhalter für die id der zugehörigen Nachricht
+Method: GET
+content-type: application/json; charset=UTF-8
+
+Request Header:
+Accept-Encoding: gzip
+Authorization: Bearer ...long auth token from getAuthToken
+Cache-Control: public, no-cache
+Cache-Time: 60
+Connection: Keep-Alive
+Host: herakles.webuntis.com
+
+Response Body:
+{
+  "id": 0000,
+  "subject": "Ein Zettel",
+  "content": "Hallo, dies ist eine Errinnerung an den Zettel",
+  "sender": {
+    "className": null,
+    "displayName": "Ser",
+    "imageUrl": null,
+    "userId": 7027
+  },
+  "sentDateTime": "2026-01-13T17:55:00",
+  "allowMessageDeletion": false,
+  "attachments": [],
+  "blobAttachment": null,
+  "storageAttachments": [],
+  "isReply": false,
+  "isReplyAllowed": false,
+  "isReportMessage": false,
+  "isReplyForbidden": false,
+  "replyHistory": [],
+  "requestConfirmation": null
+}

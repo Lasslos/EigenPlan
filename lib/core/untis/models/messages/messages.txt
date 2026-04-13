@@ -1,0 +1,103 @@
+URL: https://herakles.webuntis.com/WebUntis/api/rest/view/v1/messages?school=cjd-k%C3%B6nigswinter
+Method: GET
+content-type: application/json; charset=UTF-8
+
+Request Header:
+Accept-Encoding: gzip
+Authorization: Bearer ...long auth token from getAuthToken
+Cache-Control: public, no-cache
+Cache-Time: 60
+Connection: Keep-Alive
+Host: herakles.webuntis.com
+
+Response Body:
+{
+  "incomingMessages": [
+    {
+      "id": 6680,
+      "subject": "Erinnerung",
+      "contentPreview": "Der Inhalt der Nachricht",
+      "sender": {
+        "className": null,
+        "displayName": "Ser",
+        "imageUrl": null,
+        "userId": 7027
+      },
+      "sentDateTime": "2026-02-12T18:30:00",
+      "allowMessageDeletion": false,
+      "hasAttachments": false,
+      "isMessageRead": true,
+      "isReply": false,
+      "isReplyAllowed": false
+    },
+    {
+      "id": 6053,
+      "subject": "Unterricht nächste Woche",
+      "contentPreview": "Ein sehr langer text der der Errinerung an den Untericht in der nächsten Woche errinern soll",
+      "sender": {
+        "className": null,
+        "displayName": "Bek",
+        "imageUrl": null,
+        "userId": 7228
+      },
+      "sentDateTime": "2026-01-30T17:02:00",
+      "allowMessageDeletion": false,
+      "hasAttachments": false,
+      "isMessageRead": true,
+      "isReply": false,
+      "isReplyAllowed": false
+    },
+    {
+      "id": 3273,
+      "subject": "Zettel",
+      "contentPreview": "Hallo, dies ist eine Errinnerung an den Zettel",
+      "sender": {
+        "className": null,
+        "displayName": "Ser",
+        "imageUrl": null,
+        "userId": 7027
+      },
+      "sentDateTime": "2025-11-12T18:32:00",
+      "allowMessageDeletion": false,
+      "hasAttachments": false,
+      "isMessageRead": true,
+      "isReply": false,
+      "isReplyAllowed": false
+    },
+    {
+      "id": 2203,
+      "subject": "Material",
+      "contentPreview": "Das Material wird morgen benötigt",
+      "sender": {
+        "className": null,
+        "displayName": "Ser",
+        "imageUrl": null,
+        "userId": 7027
+      },
+      "sentDateTime": "2025-10-14T14:42:00",
+      "allowMessageDeletion": false,
+      "hasAttachments": false,
+      "isMessageRead": true,
+      "isReply": false,
+      "isReplyAllowed": false
+    },
+    {
+      "id": 497,
+      "subject": "Informatik",
+      "contentPreview": "Morgen wird der Test durchgeführt",
+      "sender": {
+        "className": null,
+        "displayName": "Sab",
+        "imageUrl": null,
+        "userId": 12
+      },
+      "sentDateTime": "2025-06-24T23:37:00",
+      "allowMessageDeletion": false,
+      "hasAttachments": false,
+      "isMessageRead": true,
+      "isReply": false,
+      "isReplyAllowed": false
+    }
+  ],
+  "readConfirmationMessages": []
+}
