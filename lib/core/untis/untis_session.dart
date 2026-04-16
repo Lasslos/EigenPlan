@@ -89,7 +89,9 @@ Future<ActiveUntisSession> refreshSession(WidgetRef ref, ActiveUntisSession sess
     logRequestError("Error while requesting session data", e, s);
     rethrow;
   }
-  var refreshedSession = session.copyWith(userData: userData);
+  final authToken = await requestAuthToken(session, session.appSharedSecret); 
+
+  var refreshedSession = session.copyWith(userData: userData, authToken: authToken);
   ref.read(untisSessionsProvider.notifier).updateSession(
         session,
         refreshedSession,
