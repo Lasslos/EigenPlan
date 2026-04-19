@@ -1,7 +1,7 @@
 name: your_schedule
 description: Filter your Untis Schedule by classes you have chosen.
 
-version: 1.4.14+1414
+version: 1.5.0+1500
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
