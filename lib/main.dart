@@ -30,7 +30,7 @@ void main() async {
       options
         ..dsn = 'https://1be6b663150041f6be6a7a4375e5599f@o4504990166155264.ingest.sentry.io/4504990173167616'
         ..tracesSampleRate = 1.0
-        ..debug = true //TODO
+        ..debug = false
         ..beforeSend = (event, hint) {
           if (sharedPreferences.getBool("sentryEnabled") != true) {
             return null;
