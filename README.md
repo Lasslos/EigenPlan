@@ -1,5 +1,6 @@
-<img src="https://raw.githubusercontent.com/Lasslos/your_schedule/main/assets/school_blue.png" alt="Icon" width="256">
 <a href="https://deepwiki.com/baer842/your_schedule"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+
+<img src="https://raw.githubusercontent.com/Lasslos/your_schedule/main/assets/school_blue.png" alt="Icon" width="256">
 # EigenPlan for Untis
 
 EigenPlan is a third-party mobile client for the Untis timetable.
