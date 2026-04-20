@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:otp/otp.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:your_schedule/core/rpc_request/rpc.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -9,17 +10,21 @@ import 'package:your_schedule/util/logger.dart';
 part 'request_auth_token.g.dart';
 
 @Riverpod(keepAlive: true)
-Future<AuthToken> authToken(
-    Ref ref,
-    UntisSession session,
-    String appSharedSecret, {
-    String oneTimePassword = '',
-  }) async {
+Future<AuthToken> authToken(Ref ref, UntisSession activeSession) async {
+  assert(activeSession is ActiveUntisSession, "Session must be active!");
+  activeSession = activeSession as ActiveUntisSession;
 
-  final schoolEncoded = Uri.encodeComponent(session.school.loginName);
+  final schoolEncoded = Uri.encodeComponent(activeSession.school.loginName);
   final uri = Uri.https(
-    session.school.server,
+    activeSession.school.server,
     '/WebUntis/api/mobile/v2/$schoolEncoded/authentication',
+  );
+
+  final oneTimePassword = OTP.generateTOTPCode(
+    activeSession.appSharedSecret.trim(),
+    DateTime.now().millisecondsSinceEpoch,
+    algorithm: Algorithm.SHA1,
+    isGoogle: true,
   );
 
   http.Response response;
@@ -28,8 +33,8 @@ Future<AuthToken> authToken(
       uri,
       headers: {'Content-Type': 'application/json; charset=utf-8'},
       body: jsonEncode({
-        'username': session.username,
-        'password': session.password,
+        'username': activeSession.username,
+        'password': activeSession.password,
         'oneTimePassword': oneTimePassword,
       }),
     );
