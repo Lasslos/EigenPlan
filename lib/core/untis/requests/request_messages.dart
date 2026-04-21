@@ -20,14 +20,14 @@ class RequestMessages extends _$RequestMessages {
         return;
       }
       data.when(
-          data: (data) {
-            ref.read(cachedMessagesProvider(session).notifier).setCachedMessages(data);
-          },
-          error: (error, stackTrace) {
-            logRequestError("Error while requesting messages", error, stackTrace);
-          },
-          loading: () {},
-        );
+        data: (data) {
+          ref.read(cachedMessagesProvider(session).notifier).setCachedMessages(data);
+        },
+        error: (error, stackTrace) {
+          logRequestError("Error while requesting messages", error, stackTrace);
+        },
+        loading: () {},
+      );
     });
 
     final uri = Uri.https(
@@ -36,14 +36,14 @@ class RequestMessages extends _$RequestMessages {
       {'school': session.school.loginName},
     );
 
-    AuthToken authToken = await ref.read(authTokenProvider(session, session.appSharedSecret).future);
+    final bearerToken = await ref.read(authTokenV2Provider(session, session.appSharedSecret).future);
 
     http.Response response;
     try {
       response = await http.get(
         uri,
         headers: {
-          'Authorization': 'Bearer ${authToken.jwt}',
+          'Authorization': 'Bearer $bearerToken',
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept-Encoding': 'gzip',
           'Cache-Control': 'public, no-cache',

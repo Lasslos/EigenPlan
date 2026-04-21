@@ -28,6 +28,7 @@ export 'untis/requests/request_school_list.dart';
 export 'untis/requests/request_timetable.dart';
 export 'untis/requests/request_user_data.dart';
 export 'untis/requests/request_auth_token.dart';
+export 'untis/requests/request_auth_token_v2.dart';
 export 'untis/requests/request_messages.dart';
 export 'untis/requests/request_specified_message.dart';
 export 'untis/untis_session.dart';
