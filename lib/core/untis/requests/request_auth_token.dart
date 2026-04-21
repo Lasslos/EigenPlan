@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:otp/otp.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:your_schedule/core/rpc_request/rpc.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -12,16 +11,9 @@ part 'request_auth_token.g.dart';
 @Riverpod(keepAlive: true)
 Future<AuthToken> authToken(
     Ref ref,
-    UntisSession session,
-    String appSharedSecret,
-    ) async {
-
-  final otp = OTP.generateTOTPCode(
-    appSharedSecret.trim(),
-    DateTime.now().millisecondsSinceEpoch,
-    algorithm: Algorithm.SHA1,
-    isGoogle: true,
-  );
+    UntisSession session, {
+      String oneTimePassword = '',
+    }) async {
 
   final schoolEncoded = Uri.encodeComponent(session.school.loginName);
   final uri = Uri.https(
@@ -37,7 +29,7 @@ Future<AuthToken> authToken(
       body: jsonEncode({
         'username': session.username,
         'password': session.password,
-        'oneTimePassword': otp.toString(),
+        'oneTimePassword': oneTimePassword,
       }),
     );
   } catch (e, s) {
@@ -51,6 +43,7 @@ Future<AuthToken> authToken(
       final token = AuthToken.fromJson(
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
       );
+
       final expiry = token.expiry;
       if (expiry != null) {
         final ttl = expiry.difference(DateTime.now()) - const Duration(seconds: 30);
@@ -59,6 +52,7 @@ Future<AuthToken> authToken(
           ref.onDispose(timer.cancel);
         }
       }
+
       return token;
 
     default:
