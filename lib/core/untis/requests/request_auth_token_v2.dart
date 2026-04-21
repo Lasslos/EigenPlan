@@ -9,7 +9,7 @@ import 'package:your_schedule/util/logger.dart';
 part 'request_auth_token_v2.g.dart';
 
 @Riverpod(keepAlive: true)
-Future<AuthToken> authTokenV2(
+Future<String> authTokenV2(
     Ref ref,
     UntisSession session,
     String appSharedSecret,
@@ -58,7 +58,6 @@ Future<AuthToken> authTokenV2(
           ttl = const Duration(minutes: 14);
         }
       } on FormatException {
-        // token is not a JWT — fall back to a fixed refresh interval
         ttl = const Duration(minutes: 14);
       }
 
@@ -67,7 +66,7 @@ Future<AuthToken> authTokenV2(
         ref.onDispose(timer.cancel);
       }
 
-      return authToken;
+      return tokenString;
 
     default:
       getLogger().e('HTTP Error: ${response.statusCode} ${response.reasonPhrase}');

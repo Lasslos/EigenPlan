@@ -9,9 +9,10 @@ import 'package:your_schedule/util/logger.dart';
 part 'request_auth_token.g.dart';
 
 @Riverpod(keepAlive: true)
-Future<AuthToken> authToken(
+Future<String> authToken(
     Ref ref,
-    UntisSession session, {
+    UntisSession session,
+    String appSharedSecret, {
       String oneTimePassword = '',
     }) async {
 
@@ -53,7 +54,7 @@ Future<AuthToken> authToken(
         }
       }
 
-      return token;
+      return token.jwt;
 
     default:
       getLogger().e('HTTP Error: ${response.statusCode} ${response.reasonPhrase}');
