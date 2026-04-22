@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -44,16 +43,6 @@ Future<String> authToken(
       final token = AuthToken.fromJson(
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
       );
-
-      final expiry = token.expiry;
-      if (expiry != null) {
-        final ttl = expiry.difference(DateTime.now()) - const Duration(seconds: 30);
-        if (ttl > Duration.zero) {
-          final timer = Timer(ttl, () => ref.invalidateSelf());
-          ref.onDispose(timer.cancel);
-        }
-      }
-
       return token.jwt;
 
     default:
