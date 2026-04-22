@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -9,9 +8,10 @@ import 'package:your_schedule/util/logger.dart';
 part 'request_auth_token.g.dart';
 
 @Riverpod(keepAlive: true)
-Future<AuthToken> authToken(
+Future<String> authToken(
     Ref ref,
-    UntisSession session, {
+    UntisSession session,
+    String appSharedSecret, {
       String oneTimePassword = '',
     }) async {
 
@@ -43,17 +43,7 @@ Future<AuthToken> authToken(
       final token = AuthToken.fromJson(
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
       );
-
-      final expiry = token.expiry;
-      if (expiry != null) {
-        final ttl = expiry.difference(DateTime.now()) - const Duration(seconds: 30);
-        if (ttl > Duration.zero) {
-          final timer = Timer(ttl, () => ref.invalidateSelf());
-          ref.onDispose(timer.cancel);
-        }
-      }
-
-      return token;
+      return token.jwt;
 
     default:
       getLogger().e('HTTP Error: ${response.statusCode} ${response.reasonPhrase}');
