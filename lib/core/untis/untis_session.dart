@@ -76,7 +76,7 @@ Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, 
     userData,
   ) as ActiveUntisSession;
   ref.read(untisSessionsProvider.notifier).updateSession(session, activeSession);
-  ref.read(authTokenProvider(activeSession, appSharedSecret).future).ignore();
+  ref.read(authTokenProvider(activeSession, appSharedSecret, oneTimePassword: token).future).ignore();
   return activeSession;
 }
 
