@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:your_schedule/core/rpc_request/rpc.dart';
 import 'package:your_schedule/core/untis.dart';
+import 'package:your_schedule/util/logger.dart';
 
 part 'request_auth_token_rpc.g.dart';
 
@@ -30,7 +31,10 @@ Future<AuthToken> authToken(
 
       if (authToken.expiry != null) {
         Duration ttl = authToken.expiry!.difference(DateTime.now()) - const Duration(seconds: 30);
-        final timer = Timer(ttl, () => ref.invalidateSelf());
+        final timer = Timer(ttl, () {
+          ref.invalidateSelf();
+          getLogger().i("Invalidated auth token");
+        });
         ref.onDispose(timer.cancel);
       }
 
