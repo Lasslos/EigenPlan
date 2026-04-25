@@ -176,6 +176,7 @@ class _InitializerState extends ConsumerState<Initializer> {
         getLogger().i("Refreshing session");
         bool shouldContinue = await _refreshSession(sessions);
         if (!shouldContinue) {
+          FlutterNativeSplash.remove();
           return;
         }
       } else {
