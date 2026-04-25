@@ -89,8 +89,8 @@ Future<ActiveUntisSession> refreshSession(WidgetRef ref, ActiveUntisSession sess
   }
   var refreshedSession = session.copyWith(userData: userData);
   ref.read(untisSessionsProvider.notifier).updateSession(
-        session,
-        refreshedSession,
-      );
+    session,
+    refreshedSession,
+  );
   return refreshedSession;
 }

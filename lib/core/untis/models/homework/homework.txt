@@ -1,0 +1,98 @@
+URL: https://herakles.webuntis.com/WebUntis/jsonrpc_intern.do?school=cjd-k%C3%B6nigswinter
+Method: POST
+content-type: application/json; charset=utf-8
+
+Request Body:
+{
+  "id": "untis-mobile-android-6.5.2",
+  "jsonrpc": "2.0",
+  "method": "getHomeWork2017",
+  "params": [
+    {
+      "endDate": "2026-03-27", // start and end date in an implementation can be arbitrary dates maybe for an entire school year for an archive maybe
+      "id": 526,
+      "startDate": "2026-03-20",
+      "type": "STUDENT",
+      "auth": {
+        "clientTime": 1776685608171,
+        "otp": 123456,
+        "user": "username"
+      }
+    }
+  ]
+}
+
+Response Body:
+{
+  "jsonrpc": "2.0",
+  "id": "untis-mobile-android-6.5.2",
+  "result": {
+    "homeWorks": [
+      {
+        "id": 16372, // the same id as the the one from timetable
+        "lessonId": 7553,
+        "startDate": "2026-03-15",
+        "endDate": "2026-03-20",
+        "text": "Macht einfach irgendetwas",
+        "remark": null,
+        "completed": false,
+        "attachments": []
+      },
+      {
+        "id": 16521,
+        "lessonId": 7655,
+        "startDate": "2026-03-20",
+        "endDate": "2026-03-21",
+        "text": "Lernt wie man mit C programmiert bis morgen",
+        "remark": null,
+        "completed": false,
+        "attachments": []
+      },
+      {
+        "id": 16427,
+        "lessonId": 7986,
+        "startDate": "2026-03-16",
+        "endDate": "2026-03-23",
+        "text": "Eine Aufgabe",
+        "remark": null,
+        "completed": false,
+        "attachments": []
+      }
+    ],
+    "lessonsById": {
+      "7553": {
+        "id": 7553,
+        "subjectId": 15,
+        "klassenIds": [
+          1517,
+          1520,
+          1523,
+          1741
+        ],
+        "teacherIds": [
+          142
+        ]
+      },
+      "7986": {
+        "id": 7986,
+        "subjectId": 123,
+        "klassenIds": [
+          1517
+        ],
+        "teacherIds": [
+          1304
+        ]
+      },
+      "7655": {
+        "id": 7655,
+        "subjectId": 35,
+        "klassenIds": [
+          1517
+        ],
+        "teacherIds": [
+          1118
+        ]
+      }
+    }
+  }
+}

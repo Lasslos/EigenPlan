@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -171,16 +172,16 @@ class _InitializerState extends ConsumerState<Initializer> {
 
       List<ConnectivityResult> connectivity = await Connectivity().checkConnectivity();
       bool canMakeRequest = !connectivity.contains(ConnectivityResult.none);
+      getLogger().d("Connectivity: $connectivity, canMakeRequest: $canMakeRequest");
 
       if (canMakeRequest) {
         getLogger().i("Refreshing session");
-        bool shouldContinue = await _refreshSession(sessions);
-        if (!shouldContinue) {
-          return;
-        }
+        await _refreshSession(sessions);
       } else {
-        getLogger().i("Can't make request, navigating to home screen");
+        getLogger().i("Can't make request");
       }
+
+      getLogger().i("Navigating to home screen");
 
       Navigator.pushReplacement(
         context,
@@ -238,7 +239,7 @@ class _InitializerState extends ConsumerState<Initializer> {
     }
   }
 
-//Returns true if successful and initialization should continue
+  //Returns true if successful and initialization should continue
   Future<bool> _refreshSession(List<UntisSession> sessions) async {
     // Refreshing session, error handling
     try {
@@ -248,7 +249,7 @@ class _InitializerState extends ConsumerState<Initializer> {
       if (!shouldContinue) {
         return false;
       }
-    } on (SocketException, TimeoutException) {
+    } on (SocketException, TimeoutException, ClientException) {
       getLogger().w("No internet connection, using cached data");
     } catch (e, s) {
       await Sentry.captureException(e, stackTrace: s);

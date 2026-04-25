@@ -1,0 +1,28 @@
+URL: https://herakles.webuntis.com/WebUntis/jsonrpc_intern.do?school=cjd-k%C3%B6nigswinter
+Method: Post
+content-type: application/json; charset=utf-8
+
+Request Body:
+{
+  "id": "untis-mobile-android-6.5.2",
+  "jsonrpc": "2.0",
+  "method": "getAuthToken",
+  "params": [
+    {
+      "auth": {
+        "clientTime": 1775778933611,
+        "otp": 123456,
+        "user": "username"
+      }
+    }
+  ]
+}
+
+Response Body:
+{
+  "jsonrpc": "2.0",
+  "id": "untis-mobile-android-6.5.2",
+  "result": {
+    "token": "auth token here very looooooooooooong this is the one for every 15 min auth"
+  }
+}
