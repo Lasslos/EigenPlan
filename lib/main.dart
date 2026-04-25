@@ -22,6 +22,7 @@ import 'package:your_schedule/ui/screens/loading_screen/loading_error_screen.dar
 import 'package:your_schedule/ui/screens/login_screen/welcome_screen.dart';
 import 'package:your_schedule/util/logger.dart';
 import 'package:your_schedule/util/shared_preferences.dart';
+import 'package:http/http.dart';
 
 void main() async {
   await _initializeApp();
@@ -244,13 +245,17 @@ class _InitializerState extends ConsumerState<Initializer> {
     // Refreshing session, error handling
     try {
       await refreshSession(ref, sessions[0] as ActiveUntisSession)
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 2));
     } on RPCError catch (e, s) {
       bool shouldContinue = await _onRPCError(sessions, e, s);
       if (!shouldContinue) {
         return false;
       }
-    } on (SocketException, TimeoutException) {
+    } on SocketException {
+      getLogger().w("No internet connection, using cached data");
+    } on TimeoutException {
+      getLogger().w("No internet connection, using cached data");
+    } on ClientException {
       getLogger().w("No internet connection, using cached data");
     } catch (e, s) {
       await Sentry.captureException(e, stackTrace: s);
