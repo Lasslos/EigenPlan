@@ -243,7 +243,8 @@ class _InitializerState extends ConsumerState<Initializer> {
   Future<bool> _refreshSession(List<UntisSession> sessions) async {
     // Refreshing session, error handling
     try {
-      await refreshSession(ref, sessions[0] as ActiveUntisSession);
+      await refreshSession(ref, sessions[0] as ActiveUntisSession)
+          .timeout(const Duration(seconds: 15));
     } on RPCError catch (e, s) {
       bool shouldContinue = await _onRPCError(sessions, e, s);
       if (!shouldContinue) {
