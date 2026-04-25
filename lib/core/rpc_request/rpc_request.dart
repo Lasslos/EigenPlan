@@ -80,7 +80,7 @@ Future<RPCResponse> rpcRequest({
       headers: {
         'Content-Type': 'application/json',
       },
-    ).timeout(const Duration(seconds: 15));
+    );
   } catch (e, s) {
     // Capture error with Sentry and log it.
     Sentry.captureException(
