@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/provider/specified_message_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -14,12 +15,14 @@ class MessageDetailScreen extends ConsumerWidget {
     final session =
     ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
     final message = ref.watch(messageDetailProvider(session, messageId));
+    final canMakeRequest = ref.watch(canMakeRequestProvider);
+    final requestState = canMakeRequest
+        ? ref.watch(requestSpecifiedMessageProvider(session, messageId))
+        : null;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nachricht')),
-      body: message == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+    Widget body;
+    if (message != null) {
+      body = SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,7 +40,18 @@ class MessageDetailScreen extends ConsumerWidget {
             Text(message.content),
           ],
         ),
-      ),
+      );
+    } else if (!canMakeRequest) {
+      body = const Center(child: Text('Keine gecachten Daten verfügbar'));
+    } else if (requestState?.hasError == true) {
+      body = const Center(child: Text('Fehler beim Laden der Nachricht'));
+    } else {
+      body = const Center(child: CircularProgressIndicator());
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Nachricht')),
+      body: body,
     );
   }
 }
