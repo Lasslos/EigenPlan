@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:your_schedule/util/logger.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
+import 'package:your_schedule/util/logger.dart';
 
 class QRCodeScanner extends ConsumerStatefulWidget {
   const QRCodeScanner({required this.onScan, super.key});
@@ -50,7 +50,7 @@ class _QRCodeScannerState extends ConsumerState<QRCodeScanner> {
                 cameraController?.scannedDataStream.listen(
                     (barcode) {
                       if (barcode.code != null) {
-                        getLogger().i("Barcode found: ${barcode.code}");
+                        getLogger().i('Barcode found: ${barcode.code}');
                         widget.onScan(barcode.code!);
                       }
                     }

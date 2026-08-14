@@ -37,7 +37,7 @@ class UntisSessions extends _$UntisSessions {
     _sessionMarkedForRemoval = session;
     // Remove sessions after small delay
     removeMarkedSession();
-    getLogger().i("Removed session!");
+    getLogger().i('Removed session!');
   }
 
   Future<void> removeMarkedSession() async {

@@ -8,7 +8,7 @@ part 'teacher.g.dart';
 @freezed
 abstract class Teacher with _$Teacher {
   const factory Teacher(
-    @JsonKey(name: "name") String shortName,
+    @JsonKey(name: 'name') String shortName,
     String firstName,
     String lastName,
     bool active,
@@ -20,5 +20,5 @@ abstract class Teacher with _$Teacher {
       _$TeacherFromJson(json);
 
   String get longName =>
-      "${firstName.toLowerCase().capitalizeFirst()} ${lastName.toLowerCase().capitalizeFirst()}";
+      '${firstName.toLowerCase().capitalizeFirst()} ${lastName.toLowerCase().capitalizeFirst()}';
 }

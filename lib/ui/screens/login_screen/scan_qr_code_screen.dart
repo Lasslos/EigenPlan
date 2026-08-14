@@ -59,7 +59,7 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
                       ),
                       const SizedBox(height: 8.0),
                       Text(
-                        message ?? "",
+                        message ?? '',
                         style: const TextStyle(color: Colors.red),
                       ),
                     ],
@@ -74,7 +74,7 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
                     onPressed: () {
                       Navigator.pop(context);
                     },
-                    label: const Text("Zurück"),
+                    label: const Text('Zurück'),
                     icon: const Icon(Icons.arrow_back),
                   ),
                 ),
@@ -97,7 +97,7 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
     });
 
     if (await Vibration.hasVibrator()) {
-      getLogger().i("Vibrating");
+      getLogger().i('Vibrating');
       await Vibration.vibrate(amplitude: 64, duration: 32);
     }
 
@@ -114,55 +114,55 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
     var connectivityResult = await connectivity;
     if (connectivityResult.contains(ConnectivityResult.none)) {
       setState(() {
-        message = "Keine Internetverbindung";
+        message = 'Keine Internetverbindung';
       });
       return;
     }
 
     if (barcode.isEmpty) {
-      getLogger().w("QR-Code is empty");
+      getLogger().w('QR-Code is empty');
       setState(() {
-        message = "QR-Code ist leer";
+        message = 'QR-Code ist leer';
       });
       return;
     }
 
-    if (!barcode.startsWith("untis://setschool?")) {
-      getLogger().w("QR-Code is not a valid Untis QR-Code");
+    if (!barcode.startsWith('untis://setschool?')) {
+      getLogger().w('QR-Code is not a valid Untis QR-Code');
       setState(() {
-        message = "QR-Code ist kein gültiger Untis-QR-Code";
+        message = 'QR-Code ist kein gültiger Untis-QR-Code';
       });
       return;
     }
 
     Map<String, String> parameters = {};
-    for (String parameter in barcode.split("?")[1].split("&")) {
-      List<String> parameterSplit = parameter.split("=");
+    for (String parameter in barcode.split('?')[1].split('&')) {
+      List<String> parameterSplit = parameter.split('=');
       parameters[parameterSplit[0]] = parameterSplit[1];
     }
 
-    String url = parameters["url"]!;
-    String schoolString = parameters["school"]!;
-    String user = parameters["user"]!;
-    String key = parameters["key"]!;
-    int schoolNumber = int.parse(parameters["schoolNumber"]!);
+    String url = parameters['url']!;
+    String schoolString = parameters['school']!;
+    String user = parameters['user']!;
+    String key = parameters['key']!;
+    int schoolNumber = int.parse(parameters['schoolNumber']!);
 
     List<School> schools = await ref.read(requestSchoolListProvider(schoolString).future);
     School school = schools.firstWhereOrNull((school) {
           if (school.server == url && school.loginName == schoolString && school.schoolId == schoolNumber) {
-            getLogger().i("Found matching school");
+            getLogger().i('Found matching school');
             return true;
           }
           return false;
         }
     ) ?? (School(
       url,
-      "No address",
+      'No address',
       schoolString,
       schoolString,
       -1,
-      "https://$url/WebUntis/?school=$schoolString",
-    ).also((_) => getLogger().w("Did not find matching school")));
+      'https://$url/WebUntis/?school=$schoolString',
+    ).also((_) => getLogger().w('Did not find matching school')));
 
     UntisSession session = UntisSession.inactive(
       school: school,
@@ -188,27 +188,27 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
     } on RPCError catch (e) {
       if (e.code == RPCError.twoFactorRequired) {
         setState(() {
-          message = "2-Faktor-Authentifizierung benötigt, bitte benutze den manuellen Log-In";
+          message = '2-Faktor-Authentifizierung benötigt, bitte benutze den manuellen Log-In';
         });
         return;
       }
 
       setState(() {
         message = switch (e.code) {
-          RPCError.authenticationFailed => "Falsches Passwort",
-          RPCError.invalidTwoFactor => "Falscher 2-Faktor-Token",
-          RPCError.invalidSchoolName => "Ungültiger Schulname",
-          RPCError.userLocked => "Benutzer gesperrt",
+          RPCError.authenticationFailed => 'Falsches Passwort',
+          RPCError.invalidTwoFactor => 'Falscher 2-Faktor-Token',
+          RPCError.invalidSchoolName => 'Ungültiger Schulname',
+          RPCError.userLocked => 'Benutzer gesperrt',
           int() => e.message,
         };
       });
     } on ClientException catch (e, s) {
-      getLogger().e("ClientException while logging in", error: e, stackTrace: s);
+      getLogger().e('ClientException while logging in', error: e, stackTrace: s);
       setState(() {
         message = e.toString();
       });
     } catch (e, s) {
-      getLogger().e("Unknown error while logging in", error: e, stackTrace: s);
+      getLogger().e('Unknown error while logging in', error: e, stackTrace: s);
       setState(() {
         message = e.toString();
       });

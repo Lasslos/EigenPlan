@@ -10,7 +10,7 @@ part 'request_auth_token_rpc.g.dart';
 Future<AuthToken> authToken(
     Ref ref, UntisSession activeSession,
 ) async {
-  assert(activeSession is ActiveUntisSession, "Session must be active!");
+  assert(activeSession is ActiveUntisSession, 'Session must be active!');
   final session = activeSession as ActiveUntisSession;
 
   final authParams = AuthParams(
@@ -33,7 +33,7 @@ Future<AuthToken> authToken(
         Duration ttl = authToken.expiry!.difference(DateTime.now()) - const Duration(seconds: 30);
         final timer = Timer(ttl, () {
           ref.invalidateSelf();
-          getLogger().i("Invalidated auth token");
+          getLogger().i('Invalidated auth token');
         });
         ref.onDispose(timer.cancel);
       }

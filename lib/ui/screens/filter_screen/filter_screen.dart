@@ -18,7 +18,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   late FocusNode searchFocusNode;
   late TextEditingController searchController;
   bool showSearch = false;
-  String searchQuery = "";
+  String searchQuery = '';
 
   List<int> periods = [];
 
@@ -88,9 +88,9 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
             },
             child: Center(
               child: FilterGridTile(
-                subject: subject?.name ?? "Kein Fach",
-                teacher: teacher?.shortName ?? "Kein Lehrer",
-                room: room?.name ?? "Kein Raum",
+                subject: subject?.name ?? 'Kein Fach',
+                teacher: teacher?.shortName ?? 'Kein Lehrer',
+                room: room?.name ?? 'Kein Raum',
               ),
             ),
           ),
@@ -106,7 +106,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                 onPressed: () {
                   setState(() {
                     showSearch = false;
-                    searchQuery = "";
+                    searchQuery = '';
                     searchFocusNode.unfocus();
                     searchController.clear();
                   });
@@ -164,7 +164,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                           onPressed: () {
                             setState(() {
                               searchController.clear();
-                              searchQuery = "";
+                              searchQuery = '';
                               _initPeriods();
                             });
                           },

@@ -9,7 +9,7 @@ part 'exams_provider.g.dart';
 class Exams extends _$Exams {
   @override
   Map<Date, List<Exam>> build(UntisSession session, Week week) {
-    assert(session is ActiveUntisSession, "Session must be active");
+    assert(session is ActiveUntisSession, 'Session must be active');
     if (ref.watch(canMakeRequestProvider)) {
       var exams = ref.watch(requestExamsProvider(session, week));
       if (exams.hasValue) {

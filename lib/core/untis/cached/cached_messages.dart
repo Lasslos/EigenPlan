@@ -10,19 +10,19 @@ part 'cached_messages.g.dart';
 class CachedMessages extends _$CachedMessages {
   @override
   Messages build(UntisSession activeSession) {
-    assert(activeSession is ActiveUntisSession, "Session must be active");
+    assert(activeSession is ActiveUntisSession, 'Session must be active');
     ActiveUntisSession session = activeSession as ActiveUntisSession;
-    if (!sharedPreferences.containsKey("${session.userData.id}.messages")) {
+    if (!sharedPreferences.containsKey('${session.userData.id}.messages')) {
       return const Messages(incomingMessages: [], readConfirmationMessages: []);
     }
     return Messages.fromJson(
-      jsonDecode(sharedPreferences.getString("${session.userData.id}.messages")!),
+      jsonDecode(sharedPreferences.getString('${session.userData.id}.messages')!),
     );
   }
 
   Future<void> setCachedMessages(Messages messages) async {
     await sharedPreferences.setString(
-      "${(activeSession as ActiveUntisSession).userData.id}.messages",
+      '${(activeSession as ActiveUntisSession).userData.id}.messages',
       jsonEncode(messages.toJson()),
     );
     state = messages;

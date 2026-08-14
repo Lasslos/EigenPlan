@@ -8,7 +8,7 @@ part 'specified_message_provider.g.dart';
 class MessageDetail extends _$MessageDetail {
   @override
   SpecifiedMessage? build(UntisSession session, int messageId) {
-    assert(session is ActiveUntisSession, "Session must be active");
+    assert(session is ActiveUntisSession, 'Session must be active');
     if (ref.watch(canMakeRequestProvider)) {
       var message = ref.watch(requestSpecifiedMessageProvider(session, messageId));
       if (message.hasValue) {

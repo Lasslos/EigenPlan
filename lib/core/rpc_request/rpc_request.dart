@@ -49,7 +49,7 @@ Future<RPCResponse> rpcRequest({
   // Set id for current request.
   int id = _id++;
   // Add breadcrumb to Sentry, scrub sensitive data.
-  Sentry.addBreadcrumb(
+  await Sentry.addBreadcrumb(
     Breadcrumb(
       message: 'Performing rpc request $method to $serverUrl',
       category: 'rpc.info',
@@ -83,7 +83,7 @@ Future<RPCResponse> rpcRequest({
     );
   } catch (e, s) {
     // Capture error with Sentry and log it.
-    Sentry.captureException(
+    await Sentry.captureException(
       e,
       stackTrace: s,
       hint: Hint.withMap(
@@ -94,7 +94,7 @@ Future<RPCResponse> rpcRequest({
         },
       ),
     );
-    getLogger().e("Error while performing rpcRequest $method to server $serverUrl", error: e, stackTrace: s);
+    getLogger().e('Error while performing rpcRequest $method to server $serverUrl', error: e, stackTrace: s);
     rethrow;
   }
 
@@ -105,17 +105,17 @@ Future<RPCResponse> rpcRequest({
         getLogger().f('id of response does not match id of request');
         throw const IllegalIdTokenException();
       }
-      getLogger().i("Successful RPC Request: $method"
-          "\n${rpcResponse.toStringNoResult()}");
+      getLogger().i('Successful RPC Request: $method'
+          '\n${rpcResponse.toStringNoResult()}');
       return rpcResponse;
     case 404:
       try {
         var rpcResponse = RPCResponse.fromJson(jsonDecode(response.body));
-        getLogger().w("404 RPC Request: $method"
-            "\n${rpcResponse.toStringNoResult()}");
+        getLogger().w('404 RPC Request: $method'
+            '\n${rpcResponse.toStringNoResult()}');
         return rpcResponse;
       } catch (e, s) {
-        getLogger().e("Error while performing rpcRequest $method to server $serverUrl", error: e, stackTrace: s);
+        getLogger().e('Error while performing rpcRequest $method to server $serverUrl', error: e, stackTrace: s);
         rethrow;
       }
     default:

@@ -19,7 +19,7 @@ abstract class School with _$School {
   const School._();
 
   String get rpcUrl =>
-      "https://$server/WebUntis/jsonrpc_intern.do?school=$loginName";
+      'https://$server/WebUntis/jsonrpc_intern.do?school=$loginName';
 
   factory School.fromJson(Map<String, dynamic> json) => _$SchoolFromJson(json);
 }

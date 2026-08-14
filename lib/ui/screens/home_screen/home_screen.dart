@@ -22,14 +22,14 @@ class HomeScreen extends ConsumerWidget {
             onPressed: () {
               ref.read(homeScreenDateProvider.notifier).date = Date.now();
             },
-            tooltip: "Zur jetzigen Woche springen",
+            tooltip: 'Zur jetzigen Woche springen',
           ),
           IconButton(
             onPressed: () {
               ref.read(viewModeSettingProvider.notifier).switchViewMode();
             },
             icon: Icon((-viewMode).icon),
-            tooltip: "Zu ${(-viewMode).readableName} wechseln",
+            tooltip: 'Zu ${(-viewMode).readableName} wechseln',
           ),
         ],
       ),

@@ -14,7 +14,7 @@ part 'request_exams.g.dart';
 class RequestExams extends _$RequestExams {
   @override
   Future<Map<Date, List<Exam>>> build(UntisSession activeSession, Week week) async {
-    assert(activeSession is ActiveUntisSession, "Session must be active!");
+    assert(activeSession is ActiveUntisSession, 'Session must be active!');
     ActiveUntisSession session = activeSession as ActiveUntisSession;
     // Cache/Log results by listening for changes
     listenSelf((previous, data) {
@@ -29,7 +29,7 @@ class RequestExams extends _$RequestExams {
         },
         error: (error, stackTrace) {
           logRequestError(
-              "Error while requesting exams for $week", error, stackTrace);
+              'Error while requesting exams for $week', error, stackTrace);
         },
         loading: () {},
       );

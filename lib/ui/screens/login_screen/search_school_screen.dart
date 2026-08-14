@@ -48,7 +48,7 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
                 ],
                 keyboardType: TextInputType.name,
                 decoration: InputDecoration(
-                  labelText: "Schulname oder Adresse",
+                  labelText: 'Schulname oder Adresse',
                   helperText: messageIsError ? null : message,
                   errorText: messageIsError ? message : null,
                   border: const OutlineInputBorder(),
@@ -76,7 +76,7 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
                     onPressed: () {
                       Navigator.pop(context);
                     },
-                    label: const Text("Zurück"),
+                    label: const Text('Zurück'),
                     icon: const Icon(Icons.arrow_back),
                   ),
                 ),
@@ -102,13 +102,13 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
       setState(() {
         schools = [];
       });
-      setMessage("Gib mindestens 3 Zeichen ein", false);
+      setMessage('Gib mindestens 3 Zeichen ein', false);
       return;
     }
 
     var connectivityResult = await connectivity;
     if (connectivityResult.contains(ConnectivityResult.none)) {
-      setMessage("Keine Internetverbindung", true);
+      setMessage('Keine Internetverbindung', true);
       return;
     }
 
@@ -118,7 +118,7 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
         setState(() {
           this.schools = schools;
         });
-        setMessage("Keine Ergebnisse", true);
+        setMessage('Keine Ergebnisse', true);
       } else {
         setState(() {
           this.schools = schools;
@@ -127,16 +127,16 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
       }
     } on RPCError catch (e, s) {
       if (e.code == RPCError.tooManyResults) {
-        setMessage("Zu viele Ergebnisse", false);
+        setMessage('Zu viele Ergebnisse', false);
         return;
       }
-      logRequestError("Error while requesting school list", e, s);
+      logRequestError('Error while requesting school list', e, s);
       setMessage(e.message, true);
     } on ClientException catch (e, s) {
-      logRequestError("ClientException while requesting school list", e, s);
+      logRequestError('ClientException while requesting school list', e, s);
       setMessage(e.message, true);
     } catch (e, s) {
-      logRequestError("Unknown error while requesting school list", e, s);
+      logRequestError('Unknown error while requesting school list', e, s);
       setMessage(e.toString(), true);
     }
   }

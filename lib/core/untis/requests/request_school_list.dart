@@ -10,11 +10,11 @@ part 'request_school_list.g.dart';
 @riverpod
 Future<List<School>> requestSchoolList(Ref ref, String query) async {
   final response = await rpcRequest(
-    serverUrl: Uri.parse("https://schoolsearch.webuntis.com/schoolquery2"),
-    method: "searchSchool",
+    serverUrl: Uri.parse('https://schoolsearch.webuntis.com/schoolquery2'),
+    method: 'searchSchool',
     params: [
       {
-        "search": query,
+        'search': query,
       }
     ],
   );

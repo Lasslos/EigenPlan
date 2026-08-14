@@ -6,7 +6,7 @@ class TimeOfDaySerializer implements JsonConverter<TimeOfDay, String> {
 
   @override
   TimeOfDay fromJson(String json) {
-    var time = json.substring(1).split(":");
+    var time = json.substring(1).split(':');
     return TimeOfDay(
       hour: int.parse(time[0]),
       minute: int.parse(time[1]),
@@ -15,6 +15,6 @@ class TimeOfDaySerializer implements JsonConverter<TimeOfDay, String> {
 
   @override
   String toJson(TimeOfDay object) {
-    return "T${object.hour}:${object.minute}";
+    return 'T${object.hour}:${object.minute}';
   }
 }

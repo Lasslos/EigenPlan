@@ -31,7 +31,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
   var requireTwoFactor = false;
   List<FocusNode> focusNodes = [];
 
-  String message = "";
+  String message = '';
 
   @override
   void initState() {
@@ -72,7 +72,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
                             padding: const EdgeInsets.only(bottom: 16.0),
                             child: OutlinedButton.icon(
                               onPressed: () => Navigator.pop(context),
-                              label: const Text("Zurück"),
+                              label: const Text('Zurück'),
                               icon: const Icon(Icons.arrow_back),
                             ),
                           ),
@@ -101,7 +101,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                "Login",
+                'Login',
                 style: Theme
                     .of(context)
                     .textTheme
@@ -110,7 +110,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                "Melde dich mit deinem Untis-Konto an",
+                'Melde dich mit deinem Untis-Konto an',
                 style: Theme
                     .of(context)
                     .textTheme
@@ -129,7 +129,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
                   FocusScope.of(context).requestFocus(focusNodes[1]);
                 },
                 decoration: const InputDecoration(
-                  labelText: "Untis-URL",
+                  labelText: 'Untis-URL',
                   prefixIcon: Icon(Icons.link),
                 ),
               ),
@@ -146,7 +146,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
                   FocusScope.of(context).requestFocus(focusNodes[2]);
                 },
                 decoration: const InputDecoration(
-                  labelText: "Schule",
+                  labelText: 'Schule',
                   prefixIcon: Icon(Icons.school),
                 ),
               ),
@@ -163,7 +163,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
                   FocusScope.of(context).requestFocus(focusNodes[3]);
                 },
                 decoration: const InputDecoration(
-                  labelText: "Benutzername",
+                  labelText: 'Benutzername',
                   prefixIcon: Icon(Icons.person),
                 ),
               ),
@@ -188,7 +188,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: "Passwort",
+                  labelText: 'Passwort',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: showPassword
@@ -224,7 +224,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
                       _login(connectivity);
                     },
                     decoration: const InputDecoration(
-                      labelText: "2FA-Token",
+                      labelText: '2FA-Token',
                       prefixIcon: Icon(Icons.security_outlined),
                     ),
                   ),
@@ -277,7 +277,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
                     FocusScope.of(context).unfocus();
                     _login(connectivity);
                   },
-                  child: const Text("Log In"),
+                  child: const Text('Log In'),
                 ),
               ),
             ],
@@ -295,7 +295,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
     var connectivityResult = await connectivity;
     if (connectivityResult.contains(ConnectivityResult.none)) {
       setState(() {
-        message = "Keine Internetverbindung";
+        message = 'Keine Internetverbindung';
         isLoading = false;
       });
       return;
@@ -307,14 +307,14 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
           requestSchoolListProvider(_schoolFieldController.text).future);
     } on RPCError catch (e) {
       setState(() {
-        message = "Fehler: ${e.message}";
+        message = 'Fehler: ${e.message}';
         isLoading = false;
       });
       return;
     } catch (e, s) {
-      getLogger().e("Error while requesting school list", error: e, stackTrace: s);
+      getLogger().e('Error while requesting school list', error: e, stackTrace: s);
       setState(() {
-        message = "Fehler: ${e.toString()}";
+        message = 'Fehler: ${e.toString()}';
         isLoading = false;
       });
       return;
@@ -324,19 +324,19 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
         (school) {
           if (school.server == _urlFieldController.text.trim()
             && school.loginName == _schoolFieldController.text.trim()) {
-            getLogger().i("Found matching school");
+            getLogger().i('Found matching school');
             return true;
           }
           return false;
         }
     ) ?? (School(
       _urlFieldController.text.trim(),
-      "No address",
+      'No address',
       _schoolFieldController.text.trim(),
       _schoolFieldController.text.trim(),
       -1,
-      "https://${_urlFieldController.text.trim()}/WebUntis/?school=${_schoolFieldController.text.trim()}",
-    ).also((_) => getLogger().w("Did not find matching school")));
+      'https://${_urlFieldController.text.trim()}/WebUntis/?school=${_schoolFieldController.text.trim()}',
+    ).also((_) => getLogger().w('Did not find matching school')));
 
     UntisSession session = UntisSession.inactive(
       school: school,
@@ -370,19 +370,19 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
 
       setState(() {
         message = switch (e.code) {
-          RPCError.authenticationFailed => "Falsches Passwort",
-          RPCError.invalidTwoFactor => "Falscher 2-Faktor-Token",
-          RPCError.invalidSchoolName => "Ungültiger Schulname",
+          RPCError.authenticationFailed => 'Falsches Passwort',
+          RPCError.invalidTwoFactor => 'Falscher 2-Faktor-Token',
+          RPCError.invalidSchoolName => 'Ungültiger Schulname',
           int() => e.message,
         };
       });
     } on ClientException catch (e, s) {
-      getLogger().e("ClientException while logging in", error: e, stackTrace: s);
+      getLogger().e('ClientException while logging in', error: e, stackTrace: s);
       setState(() {
         message = e.toString();
       });
     } catch (e, s) {
-      getLogger().e("Unknown Error while logging in", error: e, stackTrace: s);
+      getLogger().e('Unknown Error while logging in', error: e, stackTrace: s);
       setState(() {
         message = e.toString();
       });

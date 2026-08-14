@@ -5,8 +5,8 @@ import 'package:your_schedule/util/shared_preferences.dart';
 part 'view_mode_provider.g.dart';
 
 enum ViewMode {
-  week("Wochenansicht", Icons.calendar_view_week),
-  day("Tagesansicht", Icons.calendar_view_day);
+  week('Wochenansicht', Icons.calendar_view_week),
+  day('Tagesansicht', Icons.calendar_view_day);
 
   final String readableName;
   final IconData icon;
@@ -23,12 +23,12 @@ enum ViewMode {
 class ViewModeSetting extends _$ViewModeSetting {
   @override
   ViewMode build() {
-    int viewModeInt = sharedPreferences.getInt("viewMode") ?? 1;
+    int viewModeInt = sharedPreferences.getInt('viewMode') ?? 1;
     return ViewMode.values[viewModeInt];
   }
 
   Future<void> switchViewMode() async {
     state = -state;
-    await sharedPreferences.setInt("viewMode", state.index);
+    await sharedPreferences.setInt('viewMode', state.index);
   }
 }

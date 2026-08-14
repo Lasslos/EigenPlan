@@ -29,7 +29,7 @@ sealed class UntisSession with _$UntisSession {
   factory UntisSession.fromJson(Map<String, dynamic> json) => _$UntisSessionFromJson(json);
 }
 
-Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, {String token = ""}) async {
+Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, {String token = ''}) async {
   String appSharedSecret;
   bool passwordIsAppSharedSecret = false;
   UserData? userData;
@@ -39,12 +39,12 @@ Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, 
   } on RPCError catch (e, s) {
     if (e.code == RPCError.authenticationFailed || e.code == RPCError.userLocked) {
       // Maybe, password is secret? This is the case in QR-Codes, for example.
-      getLogger().i("Trying password as key");
+      getLogger().i('Trying password as key');
       try {
         userData = await requestUserData(session, session.password);
       } catch (_) {
         // Didn't work. Throw e.
-        logRequestError("Error while requesting session data", e, s);
+        logRequestError('Error while requesting session data', e, s);
         throw e;
       }
       // It worked! Set the variables to it.
@@ -54,7 +54,7 @@ Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, 
       rethrow;
     }
   } catch (e, s) {
-    logRequestError("Error while requesting session data", e, s);
+    logRequestError('Error while requesting session data', e, s);
     rethrow;
   }
 
@@ -62,7 +62,7 @@ Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, 
     try {
       userData = await requestUserData(session, appSharedSecret);
     } catch (e, s) {
-      logRequestError("Error while requesting session data", e, s);
+      logRequestError('Error while requesting session data', e, s);
       rethrow;
     }
   }
@@ -84,7 +84,7 @@ Future<ActiveUntisSession> refreshSession(WidgetRef ref, ActiveUntisSession sess
   try {
     userData = await requestUserData(session, session.appSharedSecret);
   } catch (e, s) {
-    logRequestError("Error while requesting session data", e, s);
+    logRequestError('Error while requesting session data', e, s);
     rethrow;
   }
   var refreshedSession = session.copyWith(userData: userData);

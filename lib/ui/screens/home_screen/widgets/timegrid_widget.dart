@@ -112,8 +112,8 @@ class _TimeGridWidgetState extends ConsumerState<TimeGridWidget> {
         ]);
       } else if (difference != null && difference < 0) {
         getLogger().w(
-          "Difference between consecutive period schedule entries is smaller than 0"
-          " (difference: $difference, entry: $entry, nextStartTime: $nextStartTime)",
+          'Difference between consecutive period schedule entries is smaller than 0'
+          ' (difference: $difference, entry: $entry, nextStartTime: $nextStartTime)',
         );
       }
     }

@@ -26,7 +26,7 @@ class CustomSubjectColors extends _$CustomSubjectColors {
       initializeFromPrefs();
     } catch (e, s) {
       Sentry.captureException(e, stackTrace: s);
-      getLogger().e("Error while parsing json", error: e, stackTrace: s);
+      getLogger().e('Error while parsing json', error: e, stackTrace: s);
     }
     return {};
   }

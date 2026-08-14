@@ -27,7 +27,7 @@ class WelcomeScreen extends StatelessWidget {
                           MaterialPageRoute(builder: (_) => const PickLoginMethodScreen()),
                         );
                       },
-                      label: const Text("Weiter"),
+                      label: const Text('Weiter'),
                       icon: const Icon(Icons.arrow_forward),
                   ),
                 ),

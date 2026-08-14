@@ -15,8 +15,8 @@ void logRequestError(String message, Object? error, StackTrace stackTrace) {
       getLogger().w(message, error: error, stackTrace: stackTrace);
       Sentry.addBreadcrumb(
         Breadcrumb(
-          category: "rpc.error",
-          message: "$message: Invalid client time",
+          category: 'rpc.error',
+          message: '$message: Invalid client time',
           level: SentryLevel.warning,
         ),
       );
@@ -24,8 +24,8 @@ void logRequestError(String message, Object? error, StackTrace stackTrace) {
       getLogger().w(message, error: error, stackTrace: stackTrace);
       Sentry.addBreadcrumb(
         Breadcrumb(
-          category: "rpc.error",
-          message: "$message: Bad credentials",
+          category: 'rpc.error',
+          message: '$message: Bad credentials',
           level: SentryLevel.warning,
         ),
       );
@@ -46,8 +46,8 @@ void logRequestError(String message, Object? error, StackTrace stackTrace) {
     getLogger().w(message, error: error, stackTrace: stackTrace);
     Sentry.addBreadcrumb(
       Breadcrumb(
-        category: "rpc.error",
-        message: "$message: $error",
+        category: 'rpc.error',
+        message: '$message: $error',
         level: SentryLevel.warning,
       ),
     );
@@ -55,8 +55,8 @@ void logRequestError(String message, Object? error, StackTrace stackTrace) {
     getLogger().w(message, error: error, stackTrace: stackTrace);
     Sentry.addBreadcrumb(
       Breadcrumb(
-        category: "network.error",
-        message: "$message: SocketException",
+        category: 'network.error',
+        message: '$message: SocketException',
         level: SentryLevel.warning,
       ),
     );
@@ -64,11 +64,11 @@ void logRequestError(String message, Object? error, StackTrace stackTrace) {
     switch (error.statusCode) {
       case 504:
       case 529:
-        getLogger().w("$message: Server down", error: error, stackTrace: stackTrace);
+        getLogger().w('$message: Server down', error: error, stackTrace: stackTrace);
         Sentry.addBreadcrumb(
           Breadcrumb(
-            category: "network.error",
-            message: "$message: Server down",
+            category: 'network.error',
+            message: '$message: Server down',
             level: SentryLevel.warning,
           ),
         );
@@ -90,8 +90,8 @@ void logRequestError(String message, Object? error, StackTrace stackTrace) {
     getLogger().w(message, error: error, stackTrace: stackTrace);
     Sentry.addBreadcrumb(
       Breadcrumb(
-        category: "network.error",
-        message: "$message: ClientException",
+        category: 'network.error',
+        message: '$message: ClientException',
         level: SentryLevel.warning,
       ),
     );

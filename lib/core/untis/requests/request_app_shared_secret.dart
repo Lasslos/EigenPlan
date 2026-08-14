@@ -8,7 +8,7 @@ import 'package:your_schedule/core/untis.dart';
 /// 2FA is required or an invalid 2FA token was provided, a [RPCError] is thrown.
 /// See [RPCError.authenticationFailed], [RPCError.twoFactorRequired}
 /// and [RPCError.invalidTwoFactor} respectively.
-Future<String> requestAppSharedSecret(UntisSession session, {String token = "",}
+Future<String> requestAppSharedSecret(UntisSession session, {String token = '',}
 ) async {
   var response = await rpcRequest(
     method: 'getAppSharedSecret',

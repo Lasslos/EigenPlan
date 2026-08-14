@@ -8,7 +8,7 @@ part 'messages_provider.g.dart';
 class InboxMessages extends _$InboxMessages {
   @override
   Messages build(UntisSession session) {
-    assert(session is ActiveUntisSession, "Session must be active");
+    assert(session is ActiveUntisSession, 'Session must be active');
     if (ref.watch(canMakeRequestProvider)) {
       var messages = ref.watch(requestMessagesProvider(session));
       if (messages.hasValue) {

@@ -4,8 +4,8 @@ import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
 import 'package:your_schedule/ui/screens/login_screen/welcome_screen.dart';
-import 'package:your_schedule/ui/screens/settings_screen/settings_screen.dart';
 import 'package:your_schedule/ui/screens/messages_screen/messages_screen.dart';
+import 'package:your_schedule/ui/screens/settings_screen/settings_screen.dart';
 
 class MyDrawer extends ConsumerWidget {
   const MyDrawer({
@@ -31,13 +31,13 @@ class MyDrawer extends ConsumerWidget {
             //TODO: Multiple accounts
           ),
           ListTile(
-            title: const Text("Stundenplan"),
+            title: const Text('Stundenplan'),
             onTap: () {
               Navigator.pop(context);
             },
           ),
           ListTile(
-            title: const Text("Filter"),
+            title: const Text('Filter'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -49,7 +49,7 @@ class MyDrawer extends ConsumerWidget {
             },
           ),
           ListTile(
-            title: const Text("Nachrichten"),
+            title: const Text('Nachrichten'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -62,7 +62,7 @@ class MyDrawer extends ConsumerWidget {
           ),
           Expanded(child: Container()),
           ListTile(
-            title: const Text("Einstellungen"),
+            title: const Text('Einstellungen'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -75,7 +75,7 @@ class MyDrawer extends ConsumerWidget {
           ),
           ListTile(
             title: Text(
-              "Logout",
+              'Logout',
               style: TextStyle(color: theme.colorScheme.error),
             ),
             onTap: () async {

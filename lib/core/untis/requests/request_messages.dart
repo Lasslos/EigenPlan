@@ -12,7 +12,7 @@ part 'request_messages.g.dart';
 class RequestMessages extends _$RequestMessages {
   @override
   Future<Messages> build(UntisSession activeSession) async {
-    assert(activeSession is ActiveUntisSession, "Session must be active");
+    assert(activeSession is ActiveUntisSession, 'Session must be active');
     ActiveUntisSession session = activeSession as ActiveUntisSession;
 
     listenSelf((previous, data) {
@@ -24,7 +24,7 @@ class RequestMessages extends _$RequestMessages {
           ref.read(cachedMessagesProvider(session).notifier).setCachedMessages(data);
         },
         error: (error, stackTrace) {
-          logRequestError("Error while requesting messages", error, stackTrace);
+          logRequestError('Error while requesting messages', error, stackTrace);
         },
         loading: () {},
       );
@@ -50,13 +50,13 @@ class RequestMessages extends _$RequestMessages {
         },
       );
     } catch (e, s) {
-      getLogger().e("Error while requesting messages", error: e, stackTrace: s);
+      getLogger().e('Error while requesting messages', error: e, stackTrace: s);
       rethrow;
     }
 
     switch (response.statusCode) {
       case 200:
-        getLogger().i("Successful messages request");
+        getLogger().i('Successful messages request');
         return Messages.fromJson(
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
         );

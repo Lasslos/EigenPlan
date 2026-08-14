@@ -28,7 +28,7 @@ class LoadingErrorScreen extends ConsumerWidget {
                 height: 200,
                 child: AspectRatio(
                   aspectRatio: 1,
-                  child: Image.asset("assets/school_blue.png"),
+                  child: Image.asset('assets/school_blue.png'),
                 ),
               ),
               Flexible(
@@ -36,12 +36,12 @@ class LoadingErrorScreen extends ConsumerWidget {
                 child: ListView(
                   children: [
                     Text(
-                      "$message\n",
+                      '$message\n',
                       style: const TextStyle(fontSize: 20),
                       textAlign: TextAlign.center,
                     ),
                     Text(
-                      error ?? "",
+                      error ?? '',
                       style: GoogleFonts.lato(fontSize: 12).copyWith(
                         color: Colors.red
                       ),
@@ -63,7 +63,7 @@ class LoadingErrorScreen extends ConsumerWidget {
                     ),
                   );
                 },
-                child: const Text("Account entfernen und neu anmelden"),
+                child: const Text('Account entfernen und neu anmelden'),
               ),
               const Spacer(),
             ],

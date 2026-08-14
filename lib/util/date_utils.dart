@@ -24,5 +24,5 @@ extension TimeOfDayUtils on TimeOfDay {
     );
   }
 
-  String toHHMM() => "$hour:$minute";
+  String toHHMM() => '$hour:$minute';
 }

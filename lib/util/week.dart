@@ -34,6 +34,6 @@ class Week {
 
   @override
   String toString() {
-    return "${startDate.toString().substring(0, 10)} bis ${endDate.toString().substring(0, 10)}";
+    return '${startDate.toString().substring(0, 10)} bis ${endDate.toString().substring(0, 10)}';
   }
 }

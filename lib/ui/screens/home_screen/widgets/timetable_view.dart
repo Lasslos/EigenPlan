@@ -48,7 +48,7 @@ class TimeTableView extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 16, right: 16, top: 8),
                 child: Text(
-                  "Zuletzt aktualisiert am ${DateFormat.Md().format(timestamp)} um ${DateFormat.Hms().format(timestamp)}.",
+                  'Zuletzt aktualisiert am ${DateFormat.Md().format(timestamp)} um ${DateFormat.Hms().format(timestamp)}.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),

@@ -29,7 +29,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
   var requireTwoFactor = false;
   List<FocusNode> focusNodes = [];
 
-  String message = "";
+  String message = '';
 
   @override
   void initState() {
@@ -64,7 +64,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: () {
                       Navigator.pop(context);
                     },
-                    label: const Text("Zurück"),
+                    label: const Text('Zurück'),
                     icon: const Icon(Icons.arrow_back),
                   ),
                 ),
@@ -87,7 +87,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                "Login",
+                'Login',
                 style: Theme
                     .of(context)
                     .textTheme
@@ -96,7 +96,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                "Melde dich mit deinem Untis-Konto an",
+                'Melde dich mit deinem Untis-Konto an',
                 style: Theme
                     .of(context)
                     .textTheme
@@ -115,7 +115,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                   FocusScope.of(context).requestFocus(focusNodes[1]);
                 },
                 decoration: const InputDecoration(
-                  labelText: "Benutzername",
+                  labelText: 'Benutzername',
                   prefixIcon: Icon(Icons.person),
                 ),
               ),
@@ -140,7 +140,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: "Passwort",
+                  labelText: 'Passwort',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: showPassword
@@ -176,7 +176,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                       _login(connectivity);
                     },
                     decoration: const InputDecoration(
-                      labelText: "2FA-Token",
+                      labelText: '2FA-Token',
                       prefixIcon: Icon(Icons.security_outlined),
                     ),
                   ),
@@ -229,7 +229,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                     FocusScope.of(context).unfocus();
                     _login(connectivity);
                   },
-                  child: const Text("Log In"),
+                  child: const Text('Log In'),
                 ),
               ),
             ],
@@ -247,7 +247,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     var connectivityResult = await connectivity;
     if (connectivityResult.contains(ConnectivityResult.none)) {
       setState(() {
-        message = "Keine Internetverbindung";
+        message = 'Keine Internetverbindung';
         isLoading = false;
       });
       return;
@@ -285,18 +285,18 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
       setState(() {
         message = switch (e.code) {
-          RPCError.authenticationFailed => "Falsches Passwort",
-          RPCError.invalidTwoFactor => "Falscher 2-Faktor-Token",
+          RPCError.authenticationFailed => 'Falsches Passwort',
+          RPCError.invalidTwoFactor => 'Falscher 2-Faktor-Token',
           int() => e.message,
         };
       });
     } on ClientException catch (e, s) {
-      getLogger().e("ClientException while logging in", error: e, stackTrace: s);
+      getLogger().e('ClientException while logging in', error: e, stackTrace: s);
       setState(() {
         message = e.toString();
       });
     } catch (e, s) {
-      getLogger().e("Unknown Error while logging in", error: e, stackTrace: s);
+      getLogger().e('Unknown Error while logging in', error: e, stackTrace: s);
       setState(() {
         message = e.toString();
       });

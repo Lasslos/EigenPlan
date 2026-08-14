@@ -121,7 +121,7 @@ class _Page extends ConsumerWidget {
                           style: Theme.of(context).textTheme.bodyLarge,
                           children: [
                             TextSpan(
-                              text: currentWeek.startDate.addDays(i).format(DateFormat("d. MMM")),
+                              text: currentWeek.startDate.addDays(i).format(DateFormat('d. MMM')),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],

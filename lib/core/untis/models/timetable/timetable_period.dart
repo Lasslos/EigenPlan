@@ -16,11 +16,11 @@ abstract class TimeTablePeriod with _$TimeTablePeriod {
   const factory TimeTablePeriod(
     int id,
     int lessonId,
-    @JsonKey(name: "startDateTime") DateTime startTime,
-    @JsonKey(name: "endDateTime") DateTime endTime,
-    @protected @JsonKey(name: "text") InternalPeriodText internalPeriodText,
+    @JsonKey(name: 'startDateTime') DateTime startTime,
+    @JsonKey(name: 'endDateTime') DateTime endTime,
+    @protected @JsonKey(name: 'text') InternalPeriodText internalPeriodText,
     @protected List<TimeTablePeriodElement> elements,
-    @JsonKey(name: "is") List<TimeTablePeriodStatus> periodStatus,
+    @JsonKey(name: 'is') List<TimeTablePeriodStatus> periodStatus,
     TimeTableExamInformation? examInformation,
   ) = _TimeTablePeriod;
 

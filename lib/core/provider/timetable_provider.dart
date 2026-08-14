@@ -9,7 +9,7 @@ part 'timetable_provider.g.dart';
 class TimeTable extends _$TimeTable {
   @override
   TimeTableWeek build(UntisSession session, Week week) {
-    assert(session is ActiveUntisSession, "Session must be active");
+    assert(session is ActiveUntisSession, 'Session must be active');
     if (ref.watch(canMakeRequestProvider)) {
       var timeTable = ref.watch(requestTimeTableProvider(session, week));
       if (timeTable.hasValue) {

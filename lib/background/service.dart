@@ -7,13 +7,13 @@ import 'package:your_schedule/util/logger.dart';
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    getLogger().i("Background fetch triggered");
+    getLogger().i('Background fetch triggered');
 
     try {
       await performBackgroundFetch();
     } catch (e, s) {
-      getLogger().e("Background fetch failed", error: e, stackTrace: s);
-      Sentry.captureException(e, stackTrace: s);
+      getLogger().e('Background fetch failed', error: e, stackTrace: s);
+      await Sentry.captureException(e, stackTrace: s);
     }
     return true;
   });
@@ -29,13 +29,13 @@ Future<void> performBackgroundFetch() async {
 Future<void> sendMessage(String title, String message, {int id = 0}) async {
   var androidDetails = AndroidNotificationDetails(
       '', '',
-      channelDescription: "Benachrichtigungen über den Vertretungsplan",
+      channelDescription: 'Benachrichtigungen über den Vertretungsplan',
 
       importance: Importance.high,
       priority: Priority.high,
       styleInformation: BigTextStyleInformation(message),
       ongoing: false,
-      icon: "@drawable/ic_launcher",
+      icon: '@drawable/ic_launcher',
   );
   var platformDetails = NotificationDetails(android: androidDetails);
   await FlutterLocalNotificationsPlugin()

@@ -12,7 +12,7 @@ part 'request_specified_message.g.dart';
 class RequestSpecifiedMessage extends _$RequestSpecifiedMessage {
   @override
   Future<SpecifiedMessage> build(UntisSession activeSession, int messageId) async {
-    assert(activeSession is ActiveUntisSession, "Session must be active");
+    assert(activeSession is ActiveUntisSession, 'Session must be active');
     ActiveUntisSession session = activeSession as ActiveUntisSession;
 
     listenSelf((previous, data) {
@@ -27,7 +27,7 @@ class RequestSpecifiedMessage extends _$RequestSpecifiedMessage {
           ref.invalidate(requestMessagesProvider(session));
         },
         error: (error, stackTrace) {
-          logRequestError("Error while requesting message $messageId", error, stackTrace);
+          logRequestError('Error while requesting message $messageId', error, stackTrace);
         },
         loading: () {},
       );
@@ -53,13 +53,13 @@ class RequestSpecifiedMessage extends _$RequestSpecifiedMessage {
         },
       );
     } catch (e, s) {
-      getLogger().e("Error while requesting specified message", error: e, stackTrace: s);
+      getLogger().e('Error while requesting specified message', error: e, stackTrace: s);
       rethrow;
     }
 
     switch (response.statusCode) {
       case 200:
-        getLogger().i("Successful specified message request");
+        getLogger().i('Successful specified message request');
         return SpecifiedMessage.fromJson(
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
         );

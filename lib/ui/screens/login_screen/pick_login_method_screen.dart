@@ -30,7 +30,7 @@ class _PickLoginMethodScreenState extends ConsumerState<PickLoginMethodScreen> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
-                            "Log-In-Methode",
+                            'Log-In-Methode',
                             style: Theme
                                 .of(context)
                                 .textTheme
@@ -41,18 +41,18 @@ class _PickLoginMethodScreenState extends ConsumerState<PickLoginMethodScreen> {
                           TextButton.icon(
                             onPressed: searchSchool,
                             icon: const Icon(Icons.search),
-                            label: const Text("Schule oder Adresse suchen"),
+                            label: const Text('Schule oder Adresse suchen'),
                           ),
                           const Divider(),
                           TextButton.icon(
                             onPressed: scanQRCore,
                             icon: const Icon(Icons.qr_code),
-                            label: const Text("QR-Code scannen"),
+                            label: const Text('QR-Code scannen'),
                           ),
                           const Divider(),
                           TextButton(
                             onPressed: manualLogin,
-                            child: const Text("Manueller Log-in"),
+                            child: const Text('Manueller Log-in'),
                           ),
                         ],
                       ),
@@ -68,7 +68,7 @@ class _PickLoginMethodScreenState extends ConsumerState<PickLoginMethodScreen> {
                     onPressed: () {
                       Navigator.pop(context);
                     },
-                    label: const Text("Zurück"),
+                    label: const Text('Zurück'),
                     icon: const Icon(Icons.arrow_back),
                   ),
                 ),

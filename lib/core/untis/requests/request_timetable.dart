@@ -15,7 +15,7 @@ part 'request_timetable.g.dart';
 class RequestTimeTable extends _$RequestTimeTable {
   @override
   Future<TimeTableWeek> build(UntisSession activeSession, Week week) async {
-    assert(activeSession is ActiveUntisSession, "Session must be active!");
+    assert(activeSession is ActiveUntisSession, 'Session must be active!');
     ActiveUntisSession session = activeSession as ActiveUntisSession;
     // Cache/Log results by listening for changes
     listenSelf((previous, data) {
@@ -30,7 +30,7 @@ class RequestTimeTable extends _$RequestTimeTable {
         },
         error: (error, stackTrace) {
           logRequestError(
-              "Error while requesting timetable for $week", error, stackTrace);
+              'Error while requesting timetable for $week', error, stackTrace);
         },
         loading: () {},
       );

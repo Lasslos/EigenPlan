@@ -83,12 +83,12 @@ class TimeTablePeriodWidget extends ConsumerWidget {
           builder: (context, constraints) {
             bool useShortText = constraints.maxWidth < 100 || orgSubject != subject || orgTeacher != teacher || orgRoom != room;
             String subjectText = (useShortText ? subject?.name : subject?.longName) ?? period.lessonText;
-            String teacherText = (useShortText ? teacher?.shortName : teacher?.longName) ?? "";
-            String roomText = room?.name ?? "";
+            String teacherText = (useShortText ? teacher?.shortName : teacher?.longName) ?? '';
+            String roomText = room?.name ?? '';
 
-            String? orgSubjectText = orgSubject != subject ? orgSubject?.name : "";
-            String? orgTeacherText = orgTeacher != teacher ? orgTeacher?.shortName : "";
-            String? orgRoomText = orgRoom != room ? orgRoom?.name : "";
+            String? orgSubjectText = orgSubject != subject ? orgSubject?.name : '';
+            String? orgTeacherText = orgTeacher != teacher ? orgTeacher?.shortName : '';
+            String? orgRoomText = orgRoom != room ? orgRoom?.name : '';
 
             return Column(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -99,13 +99,13 @@ class TimeTablePeriodWidget extends ConsumerWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: "$orgSubjectText",
+                            text: '$orgSubjectText',
                             style: const TextStyle(
                               color: Colors.white60,
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
-                          if (orgSubjectText.isNotNullOrEmpty() && subjectText.isNotNullOrEmpty()) const TextSpan(text: " "),
+                          if (orgSubjectText.isNotNullOrEmpty() && subjectText.isNotNullOrEmpty()) const TextSpan(text: ' '),
                           TextSpan(
                             text: subjectText,
                           ),
@@ -125,13 +125,13 @@ class TimeTablePeriodWidget extends ConsumerWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: "$orgTeacherText",
+                            text: '$orgTeacherText',
                             style: const TextStyle(
                               color: Colors.white60,
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
-                          if (orgTeacherText.isNotNullOrEmpty() && teacherText.isNotNullOrEmpty()) const TextSpan(text: " "),
+                          if (orgTeacherText.isNotNullOrEmpty() && teacherText.isNotNullOrEmpty()) const TextSpan(text: ' '),
                           TextSpan(
                             text: teacherText,
                           ),
@@ -151,13 +151,13 @@ class TimeTablePeriodWidget extends ConsumerWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: "$orgRoomText",
+                            text: '$orgRoomText',
                             style: const TextStyle(
                               color: Colors.white60,
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
-                          if (orgRoomText.isNotNullOrEmpty() && roomText.isNotNullOrEmpty()) const TextSpan(text: " "),
+                          if (orgRoomText.isNotNullOrEmpty() && roomText.isNotNullOrEmpty()) const TextSpan(text: ' '),
                           TextSpan(
                             text: roomText,
                           ),
@@ -247,7 +247,7 @@ class PeriodDetailsView extends ConsumerWidget {
           color: statusColor?.textColor ?? customSubjectColor.textColor,
         ),
         title: Text(
-          "Stundendetails",
+          'Stundendetails',
           style: TextStyle(
             color: statusColor?.textColor ?? customSubjectColor.textColor,
           ),
@@ -282,7 +282,7 @@ class PeriodDetailsView extends ConsumerWidget {
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
-                        if (orgSubject != subject) const TextSpan(text: " "),
+                        if (orgSubject != subject) const TextSpan(text: ' '),
                         TextSpan(
                           text: subject?.longName ?? period.subject?.id.toString() ?? period.lessonText,
                         ),
@@ -304,7 +304,7 @@ class PeriodDetailsView extends ConsumerWidget {
           if (subject?.name != null && subject!.name.isNotEmpty && subject!.name != subject!.longName)
             ListTile(
               leading: const Icon(Icons.subject),
-              title: const Text("Kurs"),
+              title: const Text('Kurs'),
               subtitle: Text.rich(
                 TextSpan(
                   children: [
@@ -316,7 +316,7 @@ class PeriodDetailsView extends ConsumerWidget {
                           decoration: TextDecoration.lineThrough,
                         ),
                       ),
-                    if (orgSubject != subject) const TextSpan(text: " "),
+                    if (orgSubject != subject) const TextSpan(text: ' '),
                     TextSpan(
                       text: subject!.name,
                     ),
@@ -326,21 +326,21 @@ class PeriodDetailsView extends ConsumerWidget {
             ),
           ListTile(
             leading: const Icon(Icons.person_outline),
-            title: const Text("Lehrer"),
+            title: const Text('Lehrer'),
             subtitle: Text.rich(
               TextSpan(
                 children: [
                   if (orgTeacher != teacher)
                     TextSpan(
-                      text: orgTeacher?.longName ?? "Kein Lehrer",
+                      text: orgTeacher?.longName ?? 'Kein Lehrer',
                       style: TextStyle(
                         color: Theme.of(context).disabledColor,
                         decoration: TextDecoration.lineThrough,
                       ),
                     ),
-                  if (orgTeacher != teacher) const TextSpan(text: " "),
+                  if (orgTeacher != teacher) const TextSpan(text: ' '),
                   TextSpan(
-                    text: teacher?.longName ?? "Kein Lehrer",
+                    text: teacher?.longName ?? 'Kein Lehrer',
                   ),
                 ],
               ),
@@ -348,21 +348,21 @@ class PeriodDetailsView extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.location_on_outlined),
-            title: const Text("Raum"),
+            title: const Text('Raum'),
             subtitle: Text.rich(
               TextSpan(
                 children: [
                   if (orgRoom != room)
                     TextSpan(
-                      text: orgRoom?.name ?? "Kein Raum",
+                      text: orgRoom?.name ?? 'Kein Raum',
                       style: TextStyle(
                         color: Theme.of(context).disabledColor,
                         decoration: TextDecoration.lineThrough,
                       ),
                     ),
-                  if (orgRoom != room) const TextSpan(text: " "),
+                  if (orgRoom != room) const TextSpan(text: ' '),
                   TextSpan(
-                    text: room?.name ?? "Kein Raum",
+                    text: room?.name ?? 'Kein Raum',
                   ),
                 ],
               ),
@@ -370,9 +370,9 @@ class PeriodDetailsView extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.info_outline),
-            title: const Text("Status"),
+            title: const Text('Status'),
             subtitle: Text(
-              period.periodStatus.map((e) => e.displayName).join(", "),
+              period.periodStatus.map((e) => e.displayName).join(', '),
             ),
           ),
           if (period.infoText.isNotEmpty)
@@ -409,13 +409,13 @@ class PeriodDetailsView extends ConsumerWidget {
                   ),
                 ),
               ),
-              title: const Text("Farbe ändern"),
+              title: const Text('Farbe ändern'),
               onTap: () {
                 //einen color picker anzeigen
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text("Farbe ändern"),
+                    title: const Text('Farbe ändern'),
                     content: MaterialColorPicker(
                       onColorChange: (color) {
                         Color textColor = color.computeLuminance() > 0.5
@@ -439,13 +439,13 @@ class PeriodDetailsView extends ConsumerWidget {
                               .remove(period.subject!.id);
                           Navigator.of(context).pop();
                         },
-                        child: const Text("Zurücksetzen"),
+                        child: const Text('Zurücksetzen'),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
-                        child: const Text("Ok"),
+                        child: const Text('Ok'),
                       ),
                     ],
                   ),
@@ -456,7 +456,7 @@ class PeriodDetailsView extends ConsumerWidget {
             ListTile(
               leading: const Icon(Icons.visibility_off, color: Colors.red),
               title: const Text(
-                "Kurs ausblenden",
+                'Kurs ausblenden',
                 style: TextStyle(color: Colors.red),
               ),
               onTap: () {

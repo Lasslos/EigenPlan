@@ -33,7 +33,7 @@ void main() async {
         ..tracesSampleRate = 1.0
         ..debug = false
         ..beforeSend = (event, hint) {
-          if (sharedPreferences.getBool("sentryEnabled") != true) {
+          if (sharedPreferences.getBool('sentryEnabled') != true) {
             return null;
           }
           return event;
@@ -48,7 +48,7 @@ void main() async {
 }
 
 Future<void> _initializeApp() async {
-  getLogger().i("Initializing started");
+  getLogger().i('Initializing started');
   // Ensure that plugin services are initialized so that `SharedPreferences` can be used before `runApp()`
   var widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
@@ -57,7 +57,7 @@ Future<void> _initializeApp() async {
 
   // Date formatting
   Intl.defaultLocale = 'de';
-  initializeDateFormatting('de_DE', null);
+  await initializeDateFormatting('de_DE', null);
 
   // Shared Preferences
   await initSharedPreferences();
@@ -136,8 +136,8 @@ class _InitializerState extends ConsumerState<Initializer> {
           context,
           MaterialPageRoute(
             builder: (context) {
-              return LoadingErrorScreen(message: "Ein unbekannter Fehler ist aufgetreten.\n"
-                  "Bitte logge dich erneut ein!", error: e.toString());
+              return LoadingErrorScreen(message: 'Ein unbekannter Fehler ist aufgetreten.\n'
+                  'Bitte logge dich erneut ein!', error: e.toString());
             },
           ),
         );
@@ -153,14 +153,14 @@ class _InitializerState extends ConsumerState<Initializer> {
   }
 
   Future<void> _postFrameInitialization() async {
-    getLogger().i("Post frame initialization started");
+    getLogger().i('Post frame initialization started');
 
     // Find sessions
     List<UntisSession> sessions = ref.read(untisSessionsProvider);
 
     // If there are no sessions, navigate to login screen
     if (sessions.isEmpty) {
-      getLogger().i("No sessions found, navigating to login screen");
+      getLogger().i('No sessions found, navigating to login screen');
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -172,16 +172,16 @@ class _InitializerState extends ConsumerState<Initializer> {
 
       List<ConnectivityResult> connectivity = await Connectivity().checkConnectivity();
       bool canMakeRequest = !connectivity.contains(ConnectivityResult.none);
-      getLogger().d("Connectivity: $connectivity, canMakeRequest: $canMakeRequest");
+      getLogger().d('Connectivity: $connectivity, canMakeRequest: $canMakeRequest');
 
       if (canMakeRequest) {
-        getLogger().i("Refreshing session");
+        getLogger().i('Refreshing session');
         await _refreshSession(sessions);
       } else {
         getLogger().i("Can't make request");
       }
 
-      getLogger().i("Navigating to home screen");
+      getLogger().i('Navigating to home screen');
 
       Navigator.pushReplacement(
         context,
@@ -211,24 +211,24 @@ class _InitializerState extends ConsumerState<Initializer> {
           return Consumer(
             builder: (context, ref, child) {
               return AlertDialog(
-                title: const Text("Fehlerberichte senden?"),
-                content: const Text("EigenPlan wird kontinuierlich verbessert. Wir verwenden Sentry, um Fehlerberichte zu sammeln. "
-                    "Fehlerberichte helfen uns dabei, Probleme zu erkennen und zu beheben. Dafür benötigen wir jedoch deine Zustimmung. "
-                    "Du kannst deine Zustimmung jederzeit in den Einstellungen wiederrufen. Die Einstellung wird mit einem App-Neustart aktiv. Möchtest du Fehlerberichte senden?"),
+                title: const Text('Fehlerberichte senden?'),
+                content: const Text('EigenPlan wird kontinuierlich verbessert. Wir verwenden Sentry, um Fehlerberichte zu sammeln. '
+                    'Fehlerberichte helfen uns dabei, Probleme zu erkennen und zu beheben. Dafür benötigen wir jedoch deine Zustimmung. '
+                    'Du kannst deine Zustimmung jederzeit in den Einstellungen wiederrufen. Die Einstellung wird mit einem App-Neustart aktiv. Möchtest du Fehlerberichte senden?'),
                 actions: [
                   TextButton(
                     onPressed: () {
                       ref.read(sentrySettingsProvider.notifier).setSentryEnabled(true);
                       Navigator.pop(context);
                     },
-                    child: const Text("Ja"),
+                    child: const Text('Ja'),
                   ),
                   TextButton(
                     onPressed: () {
                       ref.read(sentrySettingsProvider.notifier).setSentryEnabled(false);
                       Navigator.pop(context);
                     },
-                    child: const Text("Nein"),
+                    child: const Text('Nein'),
                   ),
                 ],
               );
@@ -250,15 +250,15 @@ class _InitializerState extends ConsumerState<Initializer> {
         return false;
       }
     } on (SocketException, TimeoutException, ClientException) {
-      getLogger().w("No internet connection, using cached data");
+      getLogger().w('No internet connection, using cached data');
     } catch (e, s) {
       await Sentry.captureException(e, stackTrace: s);
-      getLogger().e("Error while refreshing session", error: e, stackTrace: s);
+      getLogger().e('Error while refreshing session', error: e, stackTrace: s);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) {
-            return LoadingErrorScreen(message: "Es ist ein unbekannter Fehler aufgetreten", error: e.toString());
+            return LoadingErrorScreen(message: 'Es ist ein unbekannter Fehler aufgetreten', error: e.toString());
           },
         ),
       );
@@ -275,13 +275,13 @@ class _InitializerState extends ConsumerState<Initializer> {
           context,
           MaterialPageRoute(
             builder: (context) {
-              return const LoadingErrorScreen(message: "Die Zeit deines Geräts ist nicht korrekt. Bitte stelle sie richtig ein.");
+              return const LoadingErrorScreen(message: 'Die Zeit deines Geräts ist nicht korrekt. Bitte stelle sie richtig ein.');
             },
           ),
         );
         return false;
       case RPCError.authenticationFailed:
-        getLogger().w("Bad credentials, reauthenticating");
+        getLogger().w('Bad credentials, reauthenticating');
         var session = sessions.first;
         var newSession = UntisSession.inactive(
           username: session.username,
@@ -291,7 +291,7 @@ class _InitializerState extends ConsumerState<Initializer> {
         try {
           //Trying to reauthenticate
           ref.read(untisSessionsProvider.notifier).updateSession(session, await activateSession(ref, newSession));
-          getLogger().i("Reauthenticated");
+          getLogger().i('Reauthenticated');
           return true;
         } on RPCError catch (e) {
           //Reauthentication failed, deleting session
@@ -300,7 +300,7 @@ class _InitializerState extends ConsumerState<Initializer> {
               context,
               MaterialPageRoute(
                 builder: (context) {
-                  return const LoadingErrorScreen(message: "Deine Anmeldedaten sind nicht mehr gültig. Bitte melde dich erneut an.");
+                  return const LoadingErrorScreen(message: 'Deine Anmeldedaten sind nicht mehr gültig. Bitte melde dich erneut an.');
                 },
               ),
             );
@@ -311,7 +311,7 @@ class _InitializerState extends ConsumerState<Initializer> {
             context,
             MaterialPageRoute(
               builder: (context) {
-                return LoadingErrorScreen(message: "Während der Reauthentifizierung ist ein unbekannter Fehler aufgetreten.", error: e.toString());
+                return LoadingErrorScreen(message: 'Während der Reauthentifizierung ist ein unbekannter Fehler aufgetreten.', error: e.toString());
               },
             ),
           );
@@ -322,7 +322,7 @@ class _InitializerState extends ConsumerState<Initializer> {
           context,
           MaterialPageRoute(
             builder: (context) {
-              return LoadingErrorScreen(message: "Ein unbekannter Fehler ist aufgetreten.", error: e.toString());
+              return LoadingErrorScreen(message: 'Ein unbekannter Fehler ist aufgetreten.', error: e.toString());
             },
           ),
         );
