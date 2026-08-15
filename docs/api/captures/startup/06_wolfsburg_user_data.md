@@ -4,7 +4,7 @@
 POST https://wolfsburger-oberschule.webuntis.com/WebUntis/jsonrpc_intern.do?school=wolfsburger-oberschule&m=getUserData2017&a=false&s=wolfsburger-oberschule.webuntis.com&v=a6.7.0
 ```
 
-Request body follows the same shape as `06_cjd_getUserData`, with `auth.user` set to the logged-in teacher's
+Request body follows the same shape as `06_cjd_getUserData.md`, with `auth.user` set to the logged-in teacher's
 username. Response below — captured against a teacher account, useful for seeing role-dependent fields
 (`userData.elemType: TEACHER`, `rights`) that differ from a student/class account.
 

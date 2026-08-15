@@ -5,7 +5,7 @@ POST https://cjd-koewi.webuntis.com/WebUntis/api/mobile/v2/cjd-koewi/authenticat
 ```
 
 REST username/password login — exchanges credentials directly for a JWT, without going through
-`getAppSharedSecret`/`getAuthToken`. See `../spec/NOTES.md` for the open question of whether this JWT is fully
+`getAppSharedSecret`/`getAuthToken`. See `../../spec/NOTES.md` for the open question of whether this JWT is fully
 interchangeable with the one `getAuthToken` issues.
 
 ## Request
@@ -52,6 +52,6 @@ Decoded JWT payload:
 }
 ```
 
-Note `host` is empty here — the equivalent claim from `getAuthToken` (`XX_getAuthToken`) carries the real
+Note `host` is empty here — the equivalent claim from `getAuthToken` (`XX_getAuthToken.md`) carries the real
 school server hostname instead. `sub`/`username` ("Q1") is a shared cohort login (German *Qualifikationsphase
 1* year-group), not an individual's name.

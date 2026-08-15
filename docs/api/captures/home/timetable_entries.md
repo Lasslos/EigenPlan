@@ -8,8 +8,8 @@ GET https://cjd-koewi.webuntis.com/WebUntis/api/rest/view/v1/timetable/entries?s
 
 The main timetable data endpoint — supersedes `getTimetable2017`'s flat `periods` array with a pre-laid-out
 grid model (`gridEntries[].position1`..`position7`, `layoutGroup`/`layoutStartPosition`/`layoutWidth` for
-overlapping-period rendering, `icons` for homework/notes badges). See `../spec/openapi.yaml`'s `GridEntry`
-schema and `../spec/NOTES.md` §4 for the full field-by-field breakdown.
+overlapping-period rendering, `icons` for homework/notes badges). See `../../spec/openapi.yaml`'s `GridEntry`
+schema and `../../spec/NOTES.md` §4 for the full field-by-field breakdown.
 
 ## Response — cjd-koewi (404, resource not found for this school/id combination)
 

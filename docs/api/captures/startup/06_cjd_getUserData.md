@@ -6,7 +6,7 @@ POST https://cjd-koewi.webuntis.com/WebUntis/jsonrpc_intern.do?school=cjd-koewi&
 
 JSON-RPC 2.0, method `getUserData2017`. Returns master data (absence reasons, departments, duties, klassen,
 rooms, subjects, teachers, school years, time grid) plus the per-user `userData`/`settings` blocks. See
-`06_bs_gfv_user_data`, `06_schuldorf_get_user_data`, and `06_wolfsburg_user_data` for the equivalent response
+`06_bs_gfv_user_data.md`, `06_schuldorf_get_user_data.md`, and `06_wolfsburg_user_data.md` for the equivalent response
 from the other three schools.
 
 ## Request

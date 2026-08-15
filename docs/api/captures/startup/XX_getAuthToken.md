@@ -63,6 +63,6 @@ Decoded JWT payload:
 }
 ```
 
-Compare against `04_authentication`'s JWT for the same account: identical claim set, except `host` is
+Compare against `04_authentication.md`'s JWT for the same account: identical claim set, except `host` is
 populated here (the school server hostname) where `/authentication`'s token had it empty. Unconfirmed whether
-that difference is meaningful for which endpoints will accept the token — see `../spec/NOTES.md`.
+that difference is meaningful for which endpoints will accept the token — see `../../spec/NOTES.md`.

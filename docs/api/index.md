@@ -25,9 +25,14 @@ This guide explains how to intercept network traffic from the Untis Mobile Andro
 
 ## Output
 
-- `startup/` — the login/bootstrap sequence, one file per request, organized per school-portal variant
+Raw, per-endpoint capture notes live under `captures/` — this is the evidence trail, not the reference docs:
+
+- `captures/startup/` — the login/bootstrap sequence, one file per request, organized per school-portal variant
   (normal password+SSO, anonymous, SSO/key-based — see `spec/NOTES.md` for the walkthrough of each).
-- `home/` — in-app endpoints exercised after login (timetable, homework, exams, messages, dashboard).
+- `captures/home/` — in-app endpoints exercised after login (timetable, homework, exams, messages, dashboard).
+
+The readable, consolidated reference lives under `spec/`:
+
 - `spec/openapi.yaml` — the consolidated, redacted OpenAPI specification derived from the captures above.
 - `spec/NOTES.md` — prose companion to the spec: per-school login walkthroughs and a consolidated list of open
   questions that need a follow-up capture to resolve, including:

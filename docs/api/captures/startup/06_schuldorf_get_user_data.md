@@ -4,7 +4,7 @@
 POST https://schuldorf.webuntis.com/WebUntis/jsonrpc_intern.do?school=schuldorf&m=getUserData2017&a=false&s=schuldorf.webuntis.com&v=a6.7.0
 ```
 
-Request body follows the same shape as `06_cjd_getUserData`, with `auth.user` set to the logged-in student's
+Request body follows the same shape as `06_cjd_getUserData.md`, with `auth.user` set to the logged-in student's
 username. Response below.
 
 ## Response

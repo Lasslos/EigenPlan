@@ -74,9 +74,10 @@ info:
     ## Redacted example data
 
     All example values in this document (JWTs, FCM push tokens, S3 signed URLs/SSE-C keys, app-shared-secrets,
-    person names, message content) have been replaced with clearly-fake placeholders. Real values were visible
-    in the raw HTTP Toolkit captures under `docs/api/home/` and `docs/api/startup/` (gitignored/local only where
-    they contain live secrets) but must never be committed verbatim.
+    person names, message content) have been replaced with clearly-fake placeholders. The raw HTTP Toolkit
+    captures this spec was derived from live under `docs/api/captures/home/` and `docs/api/captures/startup/`
+    and have been redacted the same way before being committed — never re-introduce real secrets into either
+    location.
 
   contact:
     name: EigenPlan (your_schedule) — internal reverse-engineering notes

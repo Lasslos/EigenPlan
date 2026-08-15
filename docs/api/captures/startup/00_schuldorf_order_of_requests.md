@@ -19,7 +19,7 @@ Observed call order:
 11. messages/status
 12. getMessagesOfDay2017
 13. refresh-device-presence (`PATCH https://push.webuntis.com/api/refresh-device-presence/{deviceId}`, bearer
-    auth — purpose unconfirmed, see `../spec/NOTES.md`)
+    auth — purpose unconfirmed, see `../../spec/NOTES.md`)
 14. messages/status (called again)
 15. trigger/startup
 16. usage-statistics

@@ -40,7 +40,7 @@ Full message content + attachments. Two attachment mechanisms observed, both sho
 }
 ```
 
-`storageAttachments[].id` is passed as the `messageId` path segment of `../home/attachments`'s
+`storageAttachments[].id` is passed as the `messageId` path segment of `../home/attachments.md`'s
 `attachmentstorageurl` endpoint to resolve an actual download URL.
 
 ## Response — externally-hosted attachment (`attachments`)

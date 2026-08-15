@@ -107,19 +107,21 @@ each RPC call — see `AuthParams` usage in `requests/request_timetable.dart` fo
 
 ### Multi-tenant school support
 
-Different schools front Untis with different login portals/SSO variants (see `docs/api/startup/00_*_order of
-requests` files: `bs_gfv`, `cjd`, `schuldorf`, `wolfsburger_oberschule`). `School.rpcUrl` builds the per-school JSON-RPC
-endpoint from the school's `server`/`loginName`. When touching login/startup flows, check `docs/api/startup/` for the
+Different schools front Untis with different login portals/SSO variants (see `docs/api/captures/startup/00_*_order_of_requests.md`
+files: `bs_gfv`, `cjd`, `schuldorf`, `wolfsburger_oberschule`). `School.rpcUrl` builds the per-school JSON-RPC
+endpoint from the school's `server`/`loginName`. When touching login/startup flows, check `docs/api/captures/startup/` for the
 per-provider request sequences before assuming one flow fits all schools.
 
 ### API documentation
 
 `docs/api/` contains reverse-engineered documentation of the private Untis Mobile API (captured via HTTP Toolkit
 against an Android emulator running the official Untis app — see `docs/api/index.md` for the interception setup).
-`docs/api/startup/` covers the login/bootstrap sequence per school-portal variant; `docs/api/home/` covers in-app
-endpoints (timetable, homework, exams, messages, dashboard). Model files under `lib/core/untis/models/**/*.txt` pair
-raw captured JSON with the freezed models derived from them (see `lib/core/untis/models/README.md`). When adding or
-changing a model, check for a matching `.txt` capture first.
+`docs/api/captures/` holds the raw, redacted per-request captures (`startup/` for the login/bootstrap sequence per
+school-portal variant, `home/` for in-app endpoints — timetable, homework, exams, messages, dashboard);
+`docs/api/spec/openapi.yaml` and `docs/api/spec/NOTES.md` are the readable, consolidated reference derived from
+those captures — prefer the spec over the raw captures when just looking something up. Model files under
+`lib/core/untis/models/**/*.txt` pair raw captured JSON with the freezed models derived from them (see
+`lib/core/untis/models/README.md`). When adding or changing a model, check for a matching `.txt` capture first.
 
 ### Not yet implemented
 

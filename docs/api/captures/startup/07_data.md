@@ -7,7 +7,7 @@ GET https://cjd-koewi.webuntis.com/WebUntis/api/rest/view/v3/mobile/data?school=
 **Auth:** Bearer token required.
 
 Tenant + logged-in-user summary, fetched right after obtaining a bearer token. Distinct payload from
-`getUserData2017`'s `userData` block — see `../spec/NOTES.md` §5 for why these probably shouldn't be merged
+`getUserData2017`'s `userData` block — see `../../spec/NOTES.md` §5 for why these probably shouldn't be merged
 into one model.
 
 ## cjd-koewi

@@ -5,9 +5,8 @@ POST https://cjd-koewi.webuntis.com/WebUntis/jsonrpc_intern.do?school=cjd-koewi&
 ```
 
 JSON-RPC 2.0, method `getTimetable2017`. The legacy timetable call — still functional, but the app's own UI
-now appears to prefer the newer REST timetable endpoints (`../home/timetable grid`, `../home/timetable
-entries`) for rendering. `periods` came back empty in every capture against this server generation; this
-response is otherwise useful for `masterData`'s time-grid shape. See `../spec/NOTES.md` §4.
+now appears to prefer the newer REST timetable endpoints (`../home/timetable_grid.md`, `../home/timetable_entries.md`) for rendering. `periods` came back empty in every capture against this server generation; this
+response is otherwise useful for `masterData`'s time-grid shape. See `../../spec/NOTES.md` §4.
 
 ## Request
 

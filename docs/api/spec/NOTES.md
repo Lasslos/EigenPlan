@@ -3,8 +3,9 @@
 Companion to [`openapi.yaml`](./openapi.yaml). That file is the schema reference; this file is the prose —
 per-school login walkthroughs, a consolidated list of open questions, and my take on what in the *current*
 codebase (`lib/core/untis/`, `lib/core/rpc_request/`) should change for the rewrite, since you asked to hear
-it. Source captures this was derived from live under `docs/api/home/` and `docs/api/startup/` (raw HTTP
-Toolkit dumps, app v6.7.0 against WU server 2027.0.2).
+it. Source captures this was derived from live under `docs/api/captures/home/` and `docs/api/captures/startup/`
+(raw HTTP Toolkit dumps, app v6.7.0 against WU server 2027.0.2, redacted before being committed — see each
+file for the exact endpoint).
 
 ## 1. What actually changed since the app was last touched
 

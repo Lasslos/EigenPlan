@@ -5,7 +5,7 @@ POST https://cjd-koewi.webuntis.com/WebUntis/jsonrpc_intern.do?school=cjd-koewi&
 ```
 
 JSON-RPC 2.0, method `getMessagesOfDay2017`. Distinct concept from the REST `/messages` family (see
-`../home/messages`) — this is the older "message of the day" list, not the general inbox.
+`../home/messages.md`) — this is the older "message of the day" list, not the general inbox.
 
 ## Request
 
