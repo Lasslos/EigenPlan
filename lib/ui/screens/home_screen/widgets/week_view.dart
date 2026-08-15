@@ -7,7 +7,7 @@ import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/settings/view_mode_provider.dart';
 import 'package:your_schedule/ui/screens/home_screen/home_screen_date_provider.dart';
-import 'package:your_schedule/ui/screens/home_screen/widgets/period_layout.dart';
+import 'package:your_schedule/ui/screens/home_screen/widgets/grid_entry_layout.dart';
 import 'package:your_schedule/ui/screens/home_screen/widgets/time_indicator.dart';
 import 'package:your_schedule/utils.dart';
 
@@ -79,21 +79,20 @@ class _Page extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     Date currentDate = _indexToDate(index, 0);
     Week currentWeek = Week.fromDate(currentDate);
-    List<List<TimeTablePeriod>?> days = [];
+    List<List<GridEntry>> days = [];
 
     var filters = ref.watch(filtersProvider);
 
-    var session = ref.read(selectedUntisSessionProvider);
+    var session = ref.read(selectedUntisSessionProvider) as ActiveUntisSession;
+    var subjects = session.userData.subjects;
     var timeTable = ref.watch(timeTableProvider(session, Week.fromDate(currentDate)));
     //Note: Week starts on Saturday to show next week after Friday
     for (var i = 2; i < 7; i++) {
       days.add(
-        timeTable[currentWeek.startDate.addDays(i)]!.where(
-          (element) {
-            if (element.subject == null) {
-              return true;
-            }
-            return filters.contains(element.subject!.id);
+        (timeTable[currentWeek.startDate.addDays(i)]?.gridEntries ?? []).where(
+          (entry) {
+            var subjectId = entry.resolveSubject(subjects)?.key;
+            return subjectId == null || filters.contains(subjectId);
           },
         ).toList(),
       );
@@ -148,9 +147,9 @@ class _Page extends ConsumerWidget {
                     }
                     return Flexible(
                       fit: FlexFit.tight,
-                      child: PeriodLayout(
+                      child: GridEntryLayout(
                         fontSize: 12,
-                        periods: days[index ~/ 2]!,
+                        entries: days[index ~/ 2],
                       ),
                     );
                   },
