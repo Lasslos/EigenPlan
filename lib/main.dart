@@ -61,38 +61,6 @@ Future<void> _initializeApp() async {
 
   // Shared Preferences
   await initSharedPreferences();
-
-
-  // periodic background fetching is not supported on IOS due to battery saving restrictions
-  //  a workaround would be to use an external push service, but that would require the users to
-  //  transfer their passwords to a third party service, which is not acceptable.
-  //  Maybe someone will find a better solution in the future. It would be possible to provide a
-  //  self-hosted solution per school, but that's some unlikely idea for the future.
-  /* ToDo: Add notifications
-  if (!kIsWeb && Platform.isAndroid) {
-    PermissionStatus? notificationsPermissionStatus;
-
-    await Permission.notification.isDenied.then((value) async {
-      if (value) {
-        notificationsPermissionStatus = await Permission.notification.request();
-      }
-    });
-    getLogger().i("Notifications permission status: $notificationsPermissionStatus");
-    //ToDo: Implement settings for notifications
-    bool enableNotifications = true;
-    int notificationInterval = 15;
-
-    await Workmanager().cancelAll();
-    if (enableNotifications && (notificationsPermissionStatus ?? PermissionStatus.granted).isGranted) {
-      await Workmanager().initialize(background.callbackDispatcher, isInDebugMode: kDebugMode);
-      await Workmanager().registerPeriodicTask(
-          "",
-          "",
-          frequency: Duration(minutes: notificationInterval),
-      );
-    }
-  }*/
-
 }
 
 class MyApp extends ConsumerWidget {

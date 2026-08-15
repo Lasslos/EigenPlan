@@ -125,10 +125,11 @@ those captures — prefer the spec over the raw captures when just looking somet
 
 ### Not yet implemented
 
-Background/local notifications (`lib/background/service.dart`, the `Workmanager`/`flutter_local_notifications`/
-`permission_handler` dependencies, and the commented-out block in `main.dart`'s `_initializeApp`) are scaffolded but
-intentionally disabled — iOS doesn't support periodic background fetch, so this is blocked on a cross-platform
-design decision. Don't wire it back up without checking with the maintainer first.
+Background/local notifications are not on `main` — the scaffolding (`lib/background/service.dart`, the
+`Workmanager`/`flutter_local_notifications`/`permission_handler` dependencies, and the disabled block that
+called them from `main.dart`'s `_initializeApp`) lives on the `push-notifications` branch instead, since iOS
+doesn't support periodic background fetch and this is blocked on a cross-platform design decision. Don't merge
+or reintroduce it without checking with the maintainer first.
 
 ## Conventions
 

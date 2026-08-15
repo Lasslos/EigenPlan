@@ -27,9 +27,6 @@ dependencies:
   dart_extensions_methods: ^2.0.0
   connectivity_plus: ^7.3.1
   animations: ^2.2.0
-  flutter_local_notifications: ^20.1.0
-  workmanager: ^0.10.7
-  permission_handler: ^13.0.1
   qr_code_scanner_plus: ^2.2.0
   vibration: ^3.2.0
 
