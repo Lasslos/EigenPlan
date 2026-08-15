@@ -23,6 +23,7 @@ import 'package:your_schedule/ui/screens/loading_screen/loading_error_screen.dar
 import 'package:your_schedule/ui/screens/login_screen/welcome_screen.dart';
 import 'package:your_schedule/util/logger.dart';
 import 'package:your_schedule/util/shared_preferences.dart';
+import 'package:your_schedule/util/storage_migration.dart';
 
 void main() async {
   await _initializeApp();
@@ -61,6 +62,14 @@ Future<void> _initializeApp() async {
 
   // Shared Preferences
   await initSharedPreferences();
+
+  // Wipe storage on a breaking persisted-model shape change (see storage_migration.dart) —
+  // must run before loadSessionsFromDisk, which would otherwise crash trying to parse
+  // old-shaped session data.
+  await migrateStorageIfNeeded();
+
+  // Session list (school/userData from SharedPreferences, credentials from secure storage)
+  await loadSessionsFromDisk();
 }
 
 class MyApp extends ConsumerWidget {
@@ -249,9 +258,22 @@ class _InitializerState extends ConsumerState<Initializer> {
         );
         return false;
       case RPCError.authenticationFailed:
-        getLogger().w('Bad credentials, reauthenticating');
         var session = sessions.first;
+        if (session.loginMode == LoginMode.anonymous) {
+          // No credentials to retry with for an anonymous session.
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) {
+                return const LoadingErrorScreen(message: 'Deine Sitzung ist nicht mehr gültig. Bitte melde dich erneut an.');
+              },
+            ),
+          );
+          return false;
+        }
+        getLogger().w('Bad credentials, reauthenticating');
         var newSession = UntisSession.inactive(
+          loginMode: session.loginMode,
           username: session.username,
           password: session.password,
           school: session.school,

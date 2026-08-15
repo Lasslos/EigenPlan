@@ -5,7 +5,9 @@ import 'package:http/http.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc_error.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
+import 'package:your_schedule/core/untis/requests/request_login_meta.dart';
 import 'package:your_schedule/core/untis/requests/request_school_list.dart';
+import 'package:your_schedule/ui/screens/login_screen/anonymous_login_screen.dart';
 import 'package:your_schedule/ui/screens/login_screen/login_screen.dart';
 import 'package:your_schedule/util/logger.dart';
 
@@ -154,10 +156,29 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
     });
   }
 
-  void pickedSchool(School school) {
+  Future<void> pickedSchool(School school) async {
+    // Anonymous schools skip the credential form entirely; everything else (including
+    // SSO-only schools, which login-meta doesn't reliably distinguish from normal
+    // password schools) goes through the regular login form, which offers a
+    // "login key instead of password" toggle for that case.
+    var anonymousLoginEnabled = false;
+    try {
+      var loginMeta = await ref.read(requestLoginMetaProvider(school).future);
+      anonymousLoginEnabled = loginMeta.anonymousLoginEnabled;
+    } catch (e, s) {
+      logRequestError('Error while requesting login-meta', e, s);
+    }
+
+    if (!mounted) {
+      return;
+    }
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen(school: school)),
+      MaterialPageRoute(
+        builder: (context) => anonymousLoginEnabled
+            ? AnonymousLoginScreen(school: school)
+            : LoginScreen(school: school),
+      ),
     );
   }
 }

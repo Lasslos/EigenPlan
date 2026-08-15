@@ -36,8 +36,6 @@ class RequestTimeTable extends _$RequestTimeTable {
       );
     });
 
-    var authParams = AuthParams(
-        user: session.username, appSharedSecret: session.appSharedSecret);
     var response = await rpcRequest(
       method: 'getTimetable2017',
       params: [
@@ -49,7 +47,7 @@ class RequestTimeTable extends _$RequestTimeTable {
           'masterDataTimestamp': session.userData.timeStamp,
           'timetableTimestamp': 0,
           'timetableTimestamps': [],
-          ...authParams.toJson(),
+          ...session.authParams.toJson(),
         }
       ],
       serverUrl: Uri.parse(session.school.rpcUrl),

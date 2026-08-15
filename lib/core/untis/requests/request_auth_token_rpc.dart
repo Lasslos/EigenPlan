@@ -13,14 +13,9 @@ Future<AuthToken> authToken(
   assert(activeSession is ActiveUntisSession, 'Session must be active!');
   final session = activeSession as ActiveUntisSession;
 
-  final authParams = AuthParams(
-    user: session.username,
-    appSharedSecret: session.appSharedSecret,
-  ).toJson();
-
   final response = await rpcRequest(
       method: 'getAuthToken',
-      params: [{ ...authParams }],
+      params: [{ ...session.authParams.toJson() }],
       serverUrl: Uri.parse(session.school.rpcUrl),
   );
 

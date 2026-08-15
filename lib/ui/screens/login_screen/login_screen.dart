@@ -27,6 +27,11 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
   var isLoading = false;
   var showPassword = false;
   var requireTwoFactor = false;
+  /// Some schools (SSO-only, e.g. schuldorf) replace the password with a login key
+  /// that's used directly as the app-shared-secret. Untis doesn't reliably tell us
+  /// up front whether a given school needs this, so it's a manual toggle rather than
+  /// something inferred from login-meta.
+  var useLoginKey = false;
   List<FocusNode> focusNodes = [];
 
   String message = '';
@@ -140,7 +145,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: 'Passwort',
+                  labelText: useLoginKey ? 'Login-Schlüssel' : 'Passwort',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: showPassword
@@ -151,6 +156,19 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                         showPassword = !showPassword;
                       });
                     },
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () {
+                    setState(() {
+                      useLoginKey = !useLoginKey;
+                    });
+                  },
+                  child: Text(
+                    useLoginKey ? 'Stattdessen mit Passwort anmelden' : 'Stattdessen mit Login-Schlüssel anmelden',
                   ),
                 ),
               ),
@@ -255,6 +273,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
     UntisSession session = UntisSession.inactive(
       school: widget.school,
+      loginMode: useLoginKey ? LoginMode.ssoKey : LoginMode.password,
       username: _usernameFieldController.text,
       password: _passwordFieldController.text,
     );
@@ -285,7 +304,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
       setState(() {
         message = switch (e.code) {
-          RPCError.authenticationFailed => 'Falsches Passwort',
+          RPCError.authenticationFailed => useLoginKey ? 'Ungültiger Login-Schlüssel' : 'Falsches Passwort',
           RPCError.invalidTwoFactor => 'Falscher 2-Faktor-Token',
           int() => e.message,
         };

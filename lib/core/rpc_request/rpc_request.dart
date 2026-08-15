@@ -10,27 +10,45 @@ import 'package:your_schedule/utils.dart';
 
 part 'rpc_request.freezed.dart';
 
-/// Authentication parameters for the Untis API
+/// Authentication parameters for the Untis API.
+///
+/// [AuthParams.credentials] covers both the normal password-login and SSO/key-login
+/// cases (both authenticate via a TOTP computed from an app-shared-secret — the only
+/// difference is how that secret was obtained, which is a concern of the session
+/// model, not of this transport-level type). [AuthParams.anonymous] is used for
+/// schools with anonymous login enabled, where the server expects a fixed sentinel
+/// `auth` object instead of a real OTP.
 @Freezed(toJson: false, fromJson: false)
-abstract class AuthParams with _$AuthParams {
-  const factory AuthParams({
+sealed class AuthParams with _$AuthParams {
+  const factory AuthParams.credentials({
     required String user,
     required String appSharedSecret,
-  }) = _AuthParams;
+  }) = CredentialAuthParams;
+
+  const factory AuthParams.anonymous() = AnonymousAuthParams;
 
   const AuthParams._();
 
-  Map<String, dynamic> toJson() => {
-        'auth': {
-          'user': user,
-          'otp': OTP.generateTOTPCode(
-            appSharedSecret.trim(),
-            DateTime.now().millisecondsSinceEpoch,
-            algorithm: Algorithm.SHA1,
-            isGoogle: true,
-          ),
-          'clientTime': DateTime.now().millisecondsSinceEpoch,
-        },
+  Map<String, dynamic> toJson() => switch (this) {
+        CredentialAuthParams(user: final user, appSharedSecret: final appSharedSecret) => {
+            'auth': {
+              'user': user,
+              'otp': OTP.generateTOTPCode(
+                appSharedSecret.trim(),
+                DateTime.now().millisecondsSinceEpoch,
+                algorithm: Algorithm.SHA1,
+                isGoogle: true,
+              ),
+              'clientTime': DateTime.now().millisecondsSinceEpoch,
+            },
+          },
+        AnonymousAuthParams() => {
+            'auth': {
+              'user': '#anonymous#',
+              'otp': 0,
+              'clientTime': DateTime.now().millisecondsSinceEpoch,
+            },
+          },
       };
 }
 

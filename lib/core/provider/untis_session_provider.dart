@@ -4,9 +4,80 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/util/logger.dart';
+import 'package:your_schedule/util/secure_storage_util.dart';
 import 'package:your_schedule/util/shared_preferences.dart';
 
 part 'untis_session_provider.g.dart';
+
+/// Stable per-session key for [secureStorage] entries — school + username (or the
+/// anonymous sentinel), which doesn't change across a session's inactive-\>active
+/// transition, unlike anything derived from [ActiveUntisSession.userData].
+String sessionSecretKey(School school, String? username) => '${school.loginName}::${username ?? '#anonymous#'}';
+
+/// Populated by [loadSessionsFromDisk] during app startup (see `main.dart`'s
+/// `_initializeApp`), before [UntisSessionsProvider] is ever read. Secrets
+/// (`password`/`appSharedSecret`) live in [secureStorage], not `SharedPreferences`,
+/// so hydrating them requires an async read — this lets `UntisSessions.build()` stay
+/// synchronous (like every other provider that reads it) by doing that read once,
+/// up front, the same way `sharedPreferences` itself is a late-initialized singleton
+/// populated before `runApp()`.
+List<UntisSession> loadedSessions = [];
+
+Future<void> loadSessionsFromDisk() async {
+  final sessionsJson = sharedPreferences.getStringList('sessions');
+  if (sessionsJson == null || sessionsJson.isEmpty) {
+    loadedSessions = const [];
+    return;
+  }
+
+  final sessions = <UntisSession>[];
+  for (final json in sessionsJson) {
+    try {
+      var session = UntisSession.fromJson(jsonDecode(json) as Map<String, dynamic>);
+      final key = sessionSecretKey(session.school, session.username);
+      final password = await secureStorage.read(key: passwordKey(key));
+      session = switch (session) {
+        InactiveUntisSession() => session.copyWith(password: password),
+        ActiveUntisSession() => session.copyWith(
+            password: password,
+            appSharedSecret: await secureStorage.read(key: appSharedSecretKey(key)),
+          ),
+      };
+      sessions.add(session);
+    } catch (e, s) {
+      // Old-shaped or otherwise corrupt stored session — should be rare now that
+      // migrateStorageIfNeeded wipes storage on a breaking schema-version bump, but
+      // one bad entry shouldn't take the whole app down at startup. It's dropped
+      // in-memory only; it'll keep failing to parse (harmlessly) until the next
+      // schema bump clears it out, or the user re-adds that account.
+      getLogger().e('Dropping unparseable stored session', error: e, stackTrace: s);
+    }
+  }
+  loadedSessions = List.unmodifiable(sessions);
+}
+
+Future<void> _persistSessions(List<UntisSession> sessions) async {
+  final jsonList = <String>[];
+  for (final session in sessions) {
+    final key = sessionSecretKey(session.school, session.username);
+    if (session.password != null) {
+      await secureStorage.write(key: passwordKey(key), value: session.password);
+    }
+    final appSharedSecret = session is ActiveUntisSession ? session.appSharedSecret : null;
+    if (appSharedSecret != null) {
+      await secureStorage.write(key: appSharedSecretKey(key), value: appSharedSecret);
+    }
+
+    // Strip secrets before persisting the rest — only school/loginMode/username/userData
+    // (all non-secret) end up in SharedPreferences.
+    final stripped = switch (session) {
+      InactiveUntisSession() => session.copyWith(password: null),
+      ActiveUntisSession() => session.copyWith(password: null, appSharedSecret: null),
+    };
+    jsonList.add(jsonEncode(stripped.toJson()));
+  }
+  await sharedPreferences.setStringList('sessions', jsonList);
+}
 
 /// The first session is the currently used session.
 @Riverpod(keepAlive: true)
@@ -15,10 +86,10 @@ class UntisSessions extends _$UntisSessions {
   List<UntisSession> build() {
     listenSelf((previous, next) {
       if (previous != null && previous != next) {
-        _setCachedSessions(next);
+        _persistSessions(next);
       }
     });
-    return _getCachedSessions();
+    return loadedSessions;
   }
 
   void addSession(UntisSession session) {
@@ -68,23 +139,6 @@ class UntisSessions extends _$UntisSessions {
       session,
       ...[...state]..remove(session),
     ]);
-  }
-
-  List<UntisSession> _getCachedSessions() {
-    final sessions = sharedPreferences.getStringList('sessions');
-    if (sessions == null || sessions.isEmpty) {
-      return List.unmodifiable([]);
-    }
-    return List.unmodifiable(
-      sessions.map((e) => UntisSession.fromJson(jsonDecode(e))).toList(),
-    );
-  }
-
-  Future<void> _setCachedSessions(List<UntisSession> sessions) async {
-    await sharedPreferences.setStringList(
-      'sessions',
-      sessions.map((e) => jsonEncode(e.toJson())).toList(),
-    );
   }
 }
 

@@ -35,8 +35,6 @@ class RequestExams extends _$RequestExams {
       );
     });
 
-    var authParams = AuthParams(
-        user: session.username, appSharedSecret: session.appSharedSecret);
     var response = await rpcRequest(
       method: 'getExams2017',
       params: [
@@ -45,7 +43,7 @@ class RequestExams extends _$RequestExams {
           'type': session.userData.type,
           'startDate': week.startDate.format(DateFormat('yyyy-MM-dd')),
           'endDate': week.endDate.format(DateFormat('yyyy-MM-dd')),
-          ...authParams.toJson(),
+          ...session.authParams.toJson(),
         }
       ],
       serverUrl: Uri.parse(session.school.rpcUrl),
