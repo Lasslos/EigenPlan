@@ -6,7 +6,9 @@ import 'package:http/http.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc_error.dart';
+import 'package:your_schedule/core/untis/models/login_meta/login_meta.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
+import 'package:your_schedule/core/untis/requests/request_login_meta.dart';
 import 'package:your_schedule/core/untis/requests/request_school_list.dart';
 import 'package:your_schedule/core/untis/untis_session.dart';
 import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
@@ -29,11 +31,6 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
   var isLoading = false;
   var showPassword = false;
   var requireTwoFactor = false;
-  /// Some schools (SSO-only, e.g. schuldorf) replace the password with a login key
-  /// that's used directly as the app-shared-secret. Untis doesn't reliably tell us
-  /// up front whether a given school needs this, so it's a manual toggle rather than
-  /// something inferred from login-meta.
-  var useLoginKey = false;
   List<FocusNode> focusNodes = [];
 
   String message = '';
@@ -193,7 +190,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: useLoginKey ? 'Login-Schlüssel' : 'Passwort',
+                  labelText: 'Passwort',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: showPassword
@@ -204,19 +201,6 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
                         showPassword = !showPassword;
                       });
                     },
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      useLoginKey = !useLoginKey;
-                    });
-                  },
-                  child: Text(
-                    useLoginKey ? 'Stattdessen mit Passwort anmelden' : 'Stattdessen mit Login-Schlüssel anmelden',
                   ),
                 ),
               ),
@@ -356,15 +340,27 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
       'https://${_urlFieldController.text.trim()}/WebUntis/?school=${_schoolFieldController.text.trim()}',
     ).also((_) => getLogger().w('Did not find matching school')));
 
-    UntisSession session = UntisSession.inactive(
-      school: school,
-      loginMode: useLoginKey ? LoginMode.ssoKey : LoginMode.password,
-      username: _usernameFieldController.text,
-      password: _passwordFieldController.text,
-    );
+    LoginMeta loginMeta;
+    try {
+      loginMeta = await ref.read(requestLoginMetaProvider(school).future);
+    } catch (e, s) {
+      logRequestError('Error while requesting login-meta', e, s);
+      setState(() {
+        message = 'Fehler: ${e.toString()}';
+        isLoading = false;
+      });
+      return;
+    }
 
     try {
-      session = await activateSession(ref, session, token: _tokenFieldController.text);
+      var session = await activateSessionInferringMode(
+        ref,
+        school,
+        loginMeta,
+        _usernameFieldController.text,
+        _passwordFieldController.text,
+        token: _tokenFieldController.text,
+      );
       ref.read(untisSessionsProvider.notifier).addSession(session);
 
       Navigator.pushAndRemoveUntil(
@@ -389,7 +385,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
 
       setState(() {
         message = switch (e.code) {
-          RPCError.authenticationFailed => useLoginKey ? 'Ungültiger Login-Schlüssel' : 'Falsches Passwort',
+          RPCError.authenticationFailed => 'Falsche Anmeldedaten',
           RPCError.invalidTwoFactor => 'Falscher 2-Faktor-Token',
           RPCError.invalidSchoolName => 'Ungültiger Schulname',
           int() => e.message,

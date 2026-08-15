@@ -5,6 +5,7 @@ import 'package:http/http.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc_error.dart';
+import 'package:your_schedule/core/untis/models/login_meta/login_meta.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
 import 'package:your_schedule/core/untis/untis_session.dart';
 import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
@@ -13,8 +14,9 @@ import 'package:your_schedule/util/logger.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final School school;
+  final LoginMeta loginMeta;
 
-  const LoginScreen({required this.school, super.key});
+  const LoginScreen({required this.school, required this.loginMeta, super.key});
 
   @override
   ConsumerState createState() => LoginScreenState();
@@ -27,11 +29,6 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
   var isLoading = false;
   var showPassword = false;
   var requireTwoFactor = false;
-  /// Some schools (SSO-only, e.g. schuldorf) replace the password with a login key
-  /// that's used directly as the app-shared-secret. Untis doesn't reliably tell us
-  /// up front whether a given school needs this, so it's a manual toggle rather than
-  /// something inferred from login-meta.
-  var useLoginKey = false;
   List<FocusNode> focusNodes = [];
 
   String message = '';
@@ -145,7 +142,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: useLoginKey ? 'Login-Schlüssel' : 'Passwort',
+                  labelText: 'Passwort',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: showPassword
@@ -156,19 +153,6 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                         showPassword = !showPassword;
                       });
                     },
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      useLoginKey = !useLoginKey;
-                    });
-                  },
-                  child: Text(
-                    useLoginKey ? 'Stattdessen mit Passwort anmelden' : 'Stattdessen mit Login-Schlüssel anmelden',
                   ),
                 ),
               ),
@@ -271,15 +255,15 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    UntisSession session = UntisSession.inactive(
-      school: widget.school,
-      loginMode: useLoginKey ? LoginMode.ssoKey : LoginMode.password,
-      username: _usernameFieldController.text,
-      password: _passwordFieldController.text,
-    );
-
     try {
-      session = await activateSession(ref, session, token: _tokenFieldController.text);
+      var session = await activateSessionInferringMode(
+        ref,
+        widget.school,
+        widget.loginMeta,
+        _usernameFieldController.text,
+        _passwordFieldController.text,
+        token: _tokenFieldController.text,
+      );
       ref.read(untisSessionsProvider.notifier).addSession(session);
 
       Navigator.pushAndRemoveUntil(
@@ -304,7 +288,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
       setState(() {
         message = switch (e.code) {
-          RPCError.authenticationFailed => useLoginKey ? 'Ungültiger Login-Schlüssel' : 'Falsches Passwort',
+          RPCError.authenticationFailed => 'Falsche Anmeldedaten',
           RPCError.invalidTwoFactor => 'Falscher 2-Faktor-Token',
           int() => e.message,
         };

@@ -112,6 +112,55 @@ Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, 
   return activeSession;
 }
 
+/// Activates a session for [username]/[password], inferring [LoginMode] from
+/// [loginMeta] and automatically retrying with the other credential-based mode if
+/// the first guess fails with a credential error, instead of asking the user to
+/// pick up front.
+///
+/// `login-meta` can't reliably distinguish "SSO offered alongside password" (e.g.
+/// `cjd-koewi`, where password still works) from "SSO-only, password rejected
+/// server-side" (e.g. `schuldorf`) — both report `ssoLoginEnabled: true`. So when SSO
+/// is offered at all, this tries [LoginMode.password] first (the more common case)
+/// and only retries treating the same value as a login key
+/// ([LoginMode.ssoKey]) if password is specifically rejected
+/// (`authenticationFailed`/`userLocked`) — other failures (wrong 2FA token, no
+/// connection, ...) propagate immediately rather than triggering a pointless retry.
+Future<ActiveUntisSession> activateSessionInferringMode(
+  WidgetRef ref,
+  School school,
+  LoginMeta loginMeta,
+  String username,
+  String password, {
+  String token = '',
+}) async {
+  var passwordSession = UntisSession.inactive(
+    school: school,
+    loginMode: LoginMode.password,
+    username: username,
+    password: password,
+  );
+
+  if (!loginMeta.ssoLoginEnabled) {
+    return activateSession(ref, passwordSession, token: token);
+  }
+
+  try {
+    return await activateSession(ref, passwordSession, token: token);
+  } on RPCError catch (e) {
+    if (e.code != RPCError.authenticationFailed && e.code != RPCError.userLocked) {
+      rethrow;
+    }
+    getLogger().i('Password login failed for an SSO-eligible school, retrying as a login key');
+    var ssoKeySession = UntisSession.inactive(
+      school: school,
+      loginMode: LoginMode.ssoKey,
+      username: username,
+      password: password,
+    );
+    return activateSession(ref, ssoKeySession);
+  }
+}
+
 Future<ActiveUntisSession> refreshSession(WidgetRef ref, ActiveUntisSession session) async {
   UserData userData;
   try {
