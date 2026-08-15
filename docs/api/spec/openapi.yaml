@@ -1,0 +1,2396 @@
+openapi: 3.0.3
+info:
+  title: Untis Mobile API (reverse-engineered, 2026 generation)
+  version: "2026.1.0-reverse-engineered"
+  description: |
+    Reverse-engineered specification of the private API used by the official "Untis Mobile" Android app
+    (captured against app version `a6.7.0`, WebUntis server version `2027.0.2`, mobile API version `2.26.0`).
+    This is **not** an official, published, or supported API. It was derived by intercepting HTTPS traffic
+    with HTTP Toolkit (see `docs/api/index.md`) from four real school tenants, and is documented here purely
+    to drive a from-scratch rewrite of EigenPlan's data layer.
+
+    ## Two API generations in one server
+
+    The backend exposes **two coexisting styles** of endpoint:
+
+    1. **Legacy JSON-RPC 2.0**, POSTed to `/WebUntis/jsonrpc_intern.do?school=...&m=<method>&a=<bool>&s=<host>&v=a6.7.0`
+       (plus one outlier, `schoolquery2`, on its own host). This is the *only* style the current EigenPlan
+       codebase (`lib/core/rpc_request/`) speaks. Every JSON-RPC call except `searchSchool`, `getAppInfo` and
+       `getAppSharedSecret` requires an `auth` object (see `AuthObject`) carrying a TOTP one-time password.
+    2. **A newer REST-ish API**, under `/WebUntis/api/**`, authenticated with a `Bearer` JWT (or, for schools
+       with anonymous login, an `anonymous-school-base64` header instead). This is where all of the
+       *interesting* new data lives — the home/dashboard screen, the redesigned messages inbox, and a
+       completely redesigned timetable (`timetable/grid` + `timetable/entries`) that has **no equivalent**
+       in the old `getTimetable2017` JSON-RPC call. The old call still works and still returns data (see the
+       `getTimetable2017` examples below) but the app itself now appears to prefer the REST timetable
+       endpoints for rendering — the JSON-RPC timetable call may only remain for `masterData`/back-compat.
+
+    A rewrite should almost certainly standardize on the REST endpoints wherever an equivalent exists, and
+    only fall back to JSON-RPC for the pieces that have no REST equivalent yet (see `NOTES.md` next to this
+    file for the endpoint-by-endpoint recommendation and a list of things marked **UNKNOWN** below that need
+    a follow-up capture before they can be trusted).
+
+    ## Multi-tenant / multi-login-flow support
+
+    Four schools were captured, each exercising a different corner of the login flow:
+
+    | School (`loginName`)       | Login flow                                                                 |
+    |-----------------------------|-----------------------------------------------------------------------------|
+    | `cjd-koewi`                 | Baseline: username + password, `ssoLoginEnabled: true`, `anonymousLoginEnabled: false` |
+    | `bs-gfv`                    | **Anonymous login** — no credentials at all; see the "Anonymous login" section below |
+    | `wolfsburger-oberschule`    | Normal username + password login, but the captured account is a **teacher** (`role: TEACHER`), useful for seeing rights/permissions that differ from a student/class account |
+    | `schuldorf`                 | **SSO-only** login (`ssoLoginEnabled: true`, password login disabled server-side) — see the "SSO / key-based login" section below |
+
+    ### Anonymous login (`bs-gfv`)
+
+    `GET /WebUntis/api/public/v1/login-meta` reports `anonymousLoginEnabled: true` for this school. For an
+    anonymous session:
+    - The JSON-RPC `auth` object becomes `{ "user": "#anonymous#", "otp": 0, "clientTime": <now> }` — no
+      app-shared-secret / OTP computation needed, `otp` is a literal `0`.
+    - Some REST GET endpoints accept an `anonymous-school-base64` header **instead of** `Authorization: Bearer`,
+      whose value is the school's `loginName`, base64-encoded (e.g. `bs-gfv` → `YnMtZ2Z2`). This was directly
+      observed on `/api/rest/view/v2/home`, `/api/rest/view/v1/dashboard/cards`, and `/api/rest/view/v1/timetable/menu`.
+      **UNKNOWN**: whether *every* REST GET endpoint accepts this header, or whether the app instead calls
+      `getAuthToken` with the anonymous `auth` object above to obtain a real (if low-privilege) bearer JWT and
+      uses that everywhere else — both patterns were seen in the raw captures for different endpoints and this
+      needs a follow-up capture to resolve definitively. This spec applies `anonymousSchoolHeader` as an
+      alternative security scheme only on the three endpoints where it was directly observed.
+    - `getUserData2017`/`data` (mobile/data) come back with `user: null` (mobile/data) or a synthetic user
+      (`elemId: -1`, `displayName: "IDC_ANONYMOUSUSER"`) for `getUserData2017` — model the "logged in user" as
+      nullable/optional everywhere, this is not an edge case for this school, it's the steady state.
+
+    ### SSO / key-based login (`schuldorf`)
+
+    This school has SSO login enabled and (per capture notes) password-based login disabled server-side. The
+    Untis Mobile app instead lets the user either scan a QR code or manually paste in a **key** — in both
+    cases that key is used *as if it were the app-shared-secret* to compute the TOTP `otp` directly, entirely
+    skipping `getAppSharedSecret`/`authentication`. This matches the fallback path already implemented in
+    `activateSession()` (`lib/core/untis/untis_session.dart`) for "password is actually already a shared
+    secret" (used today for QR-code logins) — for `schuldorf` this fallback is not an edge case, it is the
+    *only* working path, since there is no real password to submit. A rewrite should treat "the stored secret
+    IS the app-shared-secret, submitted password was never real" as a first-class login mode per school
+    (driven by `login-meta`'s `ssoLoginEnabled`), not a try/catch fallback after a failed normal login.
+
+    ## Redacted example data
+
+    All example values in this document (JWTs, FCM push tokens, S3 signed URLs/SSE-C keys, app-shared-secrets,
+    person names, message content) have been replaced with clearly-fake placeholders. Real values were visible
+    in the raw HTTP Toolkit captures under `docs/api/home/` and `docs/api/startup/` (gitignored/local only where
+    they contain live secrets) but must never be committed verbatim.
+
+  contact:
+    name: EigenPlan (your_schedule) — internal reverse-engineering notes
+externalDocs:
+  description: Capture methodology and raw request/response dumps this spec was derived from
+  url: ../index.md
+
+servers:
+  - url: "https://{schoolServer}.webuntis.com"
+    description: Per-school WebUntis server. Host and the `school` query parameter both carry the school's `loginName`.
+    variables:
+      schoolServer:
+        default: cjd-koewi
+        description: "The school's `loginName` / server subdomain, e.g. `cjd-koewi`, `bs-gfv`, `wolfsburger-oberschule`, `schuldorf`."
+
+tags:
+  - name: discovery
+    description: Finding a school and its login capabilities, before any authentication exists.
+  - name: legacy-rpc
+    description: The legacy JSON-RPC 2.0 dispatcher (`jsonrpc_intern.do`). One physical endpoint, many logical methods.
+  - name: auth
+    description: Obtaining and exchanging credentials for tokens.
+  - name: session
+    description: Bootstrapping app state right after login (tenant/user info, push registration, startup triggers).
+  - name: home
+    description: The home/dashboard screen.
+  - name: messages
+    description: The messages inbox.
+  - name: timetable
+    description: The (new, REST-based) timetable.
+  - name: calendar
+    description: Calendar entry detail (period drill-down), used from both the timetable and homework/exam views.
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------------------------------------------------
+  # Discovery
+  # ---------------------------------------------------------------------------------------------------------
+  /schoolquery2:
+    servers:
+      - url: "https://schoolsearch.webuntis.com"
+        description: Fixed host, independent of any school. Does not require the per-school server variable.
+    post:
+      tags: [discovery]
+      summary: Search for a school by name, or resolve a tenant ID to a school
+      description: |
+        JSON-RPC 2.0 call, method `searchSchool`. This is the very first request the app makes; nothing is
+        known about the school yet, so there's no `school` query parameter and no auth.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchSchoolRequest'
+            examples:
+              bySearchTerm:
+                summary: Free-text search (school picker autocomplete)
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: searchSchool
+                  params: [{ search: "cjd" }]
+              byTenantId:
+                summary: Resolve a previously-known tenant ID (e.g. re-verifying a saved session's school)
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: searchSchool
+                  params: [{ tenantid: "5237400" }]
+      responses:
+        '200':
+          description: |
+            Always HTTP 200, even for the "too many results" case — check for `error` vs `result` in the body,
+            per standard JSON-RPC 2.0.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SearchSchoolResult'
+                  - $ref: '#/components/schemas/RpcErrorEnvelope'
+              examples:
+                found:
+                  value:
+                    id: "untis-mobile-android-6.7.0"
+                    jsonrpc: "2.0"
+                    result:
+                      size: 0
+                      schools:
+                        - server: cjd-koewi.webuntis.com
+                          useMobileServiceUrlAndroid: false
+                          address: "53639, Königswinter, Cleethorpeser Platz 12"
+                          displayName: "CJD Königswinter Christophorusschule"
+                          loginName: cjd-koewi
+                          schoolId: 5237400
+                          useMobileServiceUrlIos: false
+                          serverUrl: "https://cjd-koewi.webuntis.com/WebUntis/?school=cjd-koewi"
+                          tenantId: "5237400"
+                          mobileServiceUrl: null
+                notFound:
+                  value:
+                    id: "untis-mobile-android-6.7.0"
+                    jsonrpc: "2.0"
+                    result: { size: 0, schools: [] }
+                tooManyResults:
+                  summary: "Search term too broad (observed for a 3-letter generic term)"
+                  value:
+                    id: "untis-mobile-android-6.7.0"
+                    jsonrpc: "2.0"
+                    error: { code: -6003, message: "too many results" }
+
+  /WebUntis/api/public/v1/login-meta:
+    get:
+      tags: [discovery]
+      summary: Get a school's supported login methods
+      description: |
+        Called right after the school is selected, before any credentials are entered, to decide which login
+        UI to show (password field, SSO button, or skip straight to "continue as guest").
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginMeta'
+              examples:
+                cjd:
+                  summary: cjd-koewi — normal password login + SSO offered, no anonymous
+                  value: { anonymousLoginEnabled: false, ssoLoginEnabled: true }
+                bsGfv:
+                  summary: bs-gfv — anonymous login enabled, no SSO
+                  value: { anonymousLoginEnabled: true, ssoLoginEnabled: false }
+
+  # ---------------------------------------------------------------------------------------------------------
+  # Legacy JSON-RPC dispatcher
+  # ---------------------------------------------------------------------------------------------------------
+  /WebUntis/jsonrpc_intern.do:
+    post:
+      tags: [legacy-rpc]
+      operationId: legacyJsonRpcDispatch
+      summary: Legacy JSON-RPC 2.0 dispatcher (all `getXyz2017`-style methods)
+      description: |
+        One physical HTTP endpoint that dispatches on the request body's `method` field (the `m` query
+        parameter appears to mirror the body's `method` — **UNKNOWN** whether the server actually reads the
+        query param or only logs/routes with it; the app always sends both in lockstep, so this was never
+        observed to diverge). Documented here as a single operation with a `oneOf`/`discriminator` request and
+        response body per method, since OpenAPI has no native concept of "one path, many logical RPC methods"
+        (OpenRPC would model this more naturally, but a plain OpenAPI doc is what renders in Swagger UI).
+
+        Methods documented below (see `discriminator.mapping` on the request/response schemas for the full
+        list): `getAppInfo`, `getAppSharedSecret`, `getAuthToken`, `getUserData2017`, `getTimetable2017`,
+        `getMessagesOfDay2017`, `getStudentAbsences2017`, `getExams2017`, `getPeriodData2017`, `getHomeWork2017`.
+
+        Every method except `getAppInfo` and `getAppSharedSecret` requires an `auth` object inside its single
+        params object — see `AuthObject`.
+      parameters:
+        - $ref: '#/components/parameters/school'
+        - name: m
+          in: query
+          required: true
+          description: Method name, mirrors the request body's `method`.
+          schema:
+            type: string
+            enum:
+              - getAppInfo
+              - getAppSharedSecret
+              - getAuthToken
+              - getUserData2017
+              - getTimetable2017
+              - getMessagesOfDay2017
+              - getStudentAbsences2017
+              - getExams2017
+              - getPeriodData2017
+              - getHomeWork2017
+        - name: a
+          in: query
+          required: true
+          description: "\"Anonymous\" flag. Observed `true` for bs-gfv's `getUserData2017` call, `false` otherwise."
+          schema:
+            type: boolean
+        - name: s
+          in: query
+          required: true
+          description: The school's server hostname (redundant with the `Host` header / `servers` base URL).
+          schema:
+            type: string
+            example: cjd-koewi.webuntis.com
+        - name: v
+          in: query
+          required: true
+          description: Untis Mobile app version, prefixed with `a` (Android). Sent by the app as a fixed constant per release.
+          schema:
+            type: string
+            example: a6.7.0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/RpcRequestGetAppInfo'
+                - $ref: '#/components/schemas/RpcRequestGetAppSharedSecret'
+                - $ref: '#/components/schemas/RpcRequestGetAuthToken'
+                - $ref: '#/components/schemas/RpcRequestGetUserData2017'
+                - $ref: '#/components/schemas/RpcRequestGetTimetable2017'
+                - $ref: '#/components/schemas/RpcRequestGetMessagesOfDay2017'
+                - $ref: '#/components/schemas/RpcRequestGetStudentAbsences2017'
+                - $ref: '#/components/schemas/RpcRequestGetExams2017'
+                - $ref: '#/components/schemas/RpcRequestGetPeriodData2017'
+                - $ref: '#/components/schemas/RpcRequestGetHomeWork2017'
+              discriminator:
+                propertyName: method
+                mapping:
+                  getAppInfo: '#/components/schemas/RpcRequestGetAppInfo'
+                  getAppSharedSecret: '#/components/schemas/RpcRequestGetAppSharedSecret'
+                  getAuthToken: '#/components/schemas/RpcRequestGetAuthToken'
+                  getUserData2017: '#/components/schemas/RpcRequestGetUserData2017'
+                  getTimetable2017: '#/components/schemas/RpcRequestGetTimetable2017'
+                  getMessagesOfDay2017: '#/components/schemas/RpcRequestGetMessagesOfDay2017'
+                  getStudentAbsences2017: '#/components/schemas/RpcRequestGetStudentAbsences2017'
+                  getExams2017: '#/components/schemas/RpcRequestGetExams2017'
+                  getPeriodData2017: '#/components/schemas/RpcRequestGetPeriodData2017'
+                  getHomeWork2017: '#/components/schemas/RpcRequestGetHomeWork2017'
+            examples:
+              getAppInfo:
+                value: { id: "untis-mobile-android-6.7.0", jsonrpc: "2.0", method: getAppInfo, params: [] }
+              getAppSharedSecret:
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getAppSharedSecret
+                  params: [{ password: "hunter2", userName: "Q1" }]
+              getAuthToken:
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getAuthToken
+                  params: [{ auth: { clientTime: 1786788458268, otp: 730465, user: "Q1" } }]
+              getUserData2017:
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getUserData2017
+                  params: [{ elementId: 0, auth: { clientTime: 1786788454232, otp: 730465, user: "Q1" } }]
+              getUserData2017Anonymous:
+                summary: "bs-gfv anonymous variant — otp is a literal 0, user is the literal string \"#anonymous#\""
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getUserData2017
+                  params: [{ elementId: 0, auth: { clientTime: 1786794734914, otp: 0, user: "#anonymous#" } }]
+              getTimetable2017:
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getTimetable2017
+                  params:
+                    - endDate: "2026-08-15"
+                      id: 1664
+                      masterDataTimestamp: 1786788455112
+                      startDate: "2026-08-15"
+                      timetableTimestamp: 0
+                      timetableTimestamps: [0]
+                      type: CLASS
+                      auth: { clientTime: 1786788458176, otp: 730465, user: "Q1" }
+              getMessagesOfDay2017:
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getMessagesOfDay2017
+                  params: [{ date: "2026-08-15", auth: { clientTime: 1786788459646, otp: 730465, user: "Q1" } }]
+              getStudentAbsences2017:
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getStudentAbsences2017
+                  params:
+                    - includeUnExcused: true
+                      startDate: "2026-08-08T12:00Z"
+                      endDate: "2026-09-15T12:00Z"
+                      includeExcused: true
+                      auth: { clientTime: 1786796614129, otp: 87948, user: "musterschueler" }
+              getExams2017:
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getExams2017
+                  params:
+                    - endDate: "2026-08-22"
+                      id: 1664
+                      startDate: "2026-08-15"
+                      type: CLASS
+                      auth: { clientTime: 1786790506363, otp: 63818, user: "Q1" }
+              getPeriodData2017:
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getPeriodData2017
+                  params:
+                    - ttIds: [6503426, 6503423]
+                      auth: { clientTime: 1786796831617, otp: 894103, user: "musterschueler" }
+              getHomeWork2017:
+                value:
+                  id: "untis-mobile-android-6.7.0"
+                  jsonrpc: "2.0"
+                  method: getHomeWork2017
+                  params:
+                    - endDate: "2026-08-22"
+                      id: 1664
+                      startDate: "2026-08-15"
+                      type: CLASS
+                      auth: { clientTime: 1786790507388, otp: 63818, user: "Q1" }
+      responses:
+        '200':
+          description: |
+            Always HTTP 200 per JSON-RPC 2.0 convention; a request-level failure is signalled by an `error`
+            key instead of `result` in the body (see `RpcErrorEnvelope`), not by the HTTP status code.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/RpcResponseGetAppInfo'
+                  - $ref: '#/components/schemas/RpcResponseGetAppSharedSecret'
+                  - $ref: '#/components/schemas/RpcResponseGetAuthToken'
+                  - $ref: '#/components/schemas/RpcResponseGetUserData2017'
+                  - $ref: '#/components/schemas/RpcResponseGetTimetable2017'
+                  - $ref: '#/components/schemas/RpcResponseGetMessagesOfDay2017'
+                  - $ref: '#/components/schemas/RpcResponseGetStudentAbsences2017'
+                  - $ref: '#/components/schemas/RpcResponseGetExams2017'
+                  - $ref: '#/components/schemas/RpcResponseGetPeriodData2017'
+                  - $ref: '#/components/schemas/RpcResponseGetHomeWork2017'
+                  - $ref: '#/components/schemas/RpcErrorEnvelope'
+
+  # ---------------------------------------------------------------------------------------------------------
+  # REST auth
+  # ---------------------------------------------------------------------------------------------------------
+  "/WebUntis/api/mobile/v2/{school}/authentication":
+    post:
+      tags: [auth]
+      summary: REST username/password login
+      description: |
+        Directly exchanges a username+password for a JWT, without going through `getAppSharedSecret`/`getAuthToken`.
+        **UNKNOWN**: whether the resulting JWT is fully interchangeable with the one returned by the JSON-RPC
+        `getAuthToken` method (same claims were observed — `tenant_id`, `sub`, `user_id`, `person_id`, etc. —
+        but `getAuthToken`'s JWT additionally carries a non-empty `host` claim; the raw captures don't prove
+        both are accepted by every REST endpoint). The original capture notes explicitly flag this as an open
+        question worth re-verifying: *"Warum gibt getAuthToken und authentication? Funzen beide für beides?"*
+        Not used for SSO-only schools (`schuldorf`) or anonymous schools (`bs-gfv`), where credentials aren't
+        a real username/password pair.
+      security: []
+      parameters:
+        - name: school
+          in: path
+          required: true
+          schema: { type: string }
+          example: cjd-koewi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationResponse'
+
+  # ---------------------------------------------------------------------------------------------------------
+  # Session bootstrap
+  # ---------------------------------------------------------------------------------------------------------
+  /WebUntis/api/rest/view/v3/mobile/data:
+    get:
+      tags: [session]
+      summary: Tenant + logged-in-user summary
+      description: |
+        Called right after obtaining a bearer token. Distinct from (and much smaller than) the JSON-RPC
+        `getUserData2017` payload — this is tenant/session metadata (school year, tenant display info, who's
+        logged in and their role/permissions), not master data (klassen/rooms/subjects/teachers) or the
+        timetable-relevant `settings` block. A rewrite should probably keep this as its own provider rather
+        than merging it into the `getUserData2017`-derived `UserData` model.
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileDataResponse'
+              examples:
+                studentAccount:
+                  value:
+                    schoolYear: null
+                    tenant: { id: "5237400", displayName: "Musterschule", wuVersion: "2027.0.2", language: "", schoolLoginName: cjd-koewi }
+                    user:
+                      id: 134
+                      username: "musteruser"
+                      person: { id: 1664, displayName: "musteruser", imageUrl: null }
+                      referencedStudents: []
+                      locale: de
+                      departmentId: 1
+                      role: KLASSE
+                      permissions: [READ_MESSAGES]
+                anonymousAccount:
+                  summary: bs-gfv — no logged-in user at all
+                  value:
+                    schoolYear: null
+                    tenant: { id: "3816800", displayName: "Musterschule BS", wuVersion: "2027.0.2", language: "", schoolLoginName: bs-gfv }
+                    user: null
+                teacherAccount:
+                  summary: wolfsburger-oberschule — role TEACHER
+                  value:
+                    schoolYear: { dateRange: { start: "2026-08-13T00:00:00", end: "2027-07-07T00:00:00" }, id: 20, name: "2026/2027" }
+                    tenant: { id: "6763800", displayName: "Musterschule WOBS", wuVersion: "2027.0.2", language: "", schoolLoginName: wolfsburger-oberschule }
+                    user:
+                      id: 1163
+                      username: "musterlehrer"
+                      person: { id: 134, displayName: "Musterlehrer", imageUrl: null }
+                      referencedStudents: []
+                      locale: de
+                      departmentId: 1
+                      role: TEACHER
+                      permissions: [READ_MESSAGES, CLASS_REGISTER, CHANGE_OWN_PASSWORD]
+
+  /WebUntis/api/rest/view/v1/profile/user-email:
+    get:
+      tags: [session]
+      summary: Get the logged-in user's stored email address
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [email]
+                properties:
+                  email:
+                    type: string
+                    description: Empty string observed when no email is on file (not null).
+                example: { email: "" }
+
+  /WebUntis/api/rest/view/v1/trigger/startup:
+    get:
+      tags: [session]
+      summary: Fetch pending "startup actions" (e.g. forced onboarding/consent dialogs)
+      security:
+        - bearerAuth: []
+        - anonymousSchoolHeader: []
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [startupActions]
+                properties:
+                  startupActions:
+                    type: array
+                    description: "**UNKNOWN** item shape — always observed empty across all 4 schools."
+                    items: {}
+              example: { startupActions: [] }
+
+  /WebUntis/api/rest/view/v1/statistics/usage-statistics-status:
+    post:
+      tags: [session]
+      summary: Check whether anonymous usage-statistics collection is active for this install
+      description: "Sent with an empty body (`Content-Length: 0`)."
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [active]
+                properties:
+                  active: { type: boolean }
+              example: { active: false }
+
+  # ---------------------------------------------------------------------------------------------------------
+  # Push notifications
+  # ---------------------------------------------------------------------------------------------------------
+  /api/register/:
+    post:
+      tags: [session]
+      summary: Register (or update) this device for push notifications
+      description: |
+        On a completely different host (`push.webuntis.com`), not the school's server. Sent once at startup
+        after login. Note this project (per `CLAUDE.md`) has push/background notifications intentionally
+        disabled/unimplemented for now — documented here for completeness only.
+      servers:
+        - url: "https://push.webuntis.com"
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushRegistration'
+      responses:
+        '200':
+          description: OK — echoes back the registration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushRegistration'
+
+  "/api/refresh-device-presence/{deviceId}":
+    patch:
+      tags: [session]
+      summary: "**UNKNOWN** — refresh this device's push \"presence\""
+      description: |
+        Only observed mentioned in passing in the `schuldorf` capture notes ("what is this?") with no captured
+        request/response body. Presumably a keep-alive heartbeat so the push backend knows the device/token is
+        still live. Not safe to implement against until captured properly.
+      servers:
+        - url: "https://push.webuntis.com"
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {}
+      responses:
+        '200':
+          description: "**UNKNOWN** response shape."
+
+  # ---------------------------------------------------------------------------------------------------------
+  # Home / dashboard
+  # ---------------------------------------------------------------------------------------------------------
+  /WebUntis/api/rest/view/v2/home:
+    get:
+      tags: [home]
+      summary: Home screen sections (the app's landing screen)
+      security:
+        - bearerAuth: []
+        - anonymousSchoolHeader: []
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeResponse'
+              examples:
+                anonymousStudent:
+                  summary: bs-gfv (anonymous) — only the events tile
+                  value:
+                    schoolName: "Musterschule BS"
+                    sections: [{ cells: [{ badge: null, type: MY_EVENTS }] }]
+                    integrationsSection: []
+                    isEmailUpdateRequired: false
+                student:
+                  summary: schuldorf — events + absences tiles
+                  value:
+                    schoolName: "Musterschule"
+                    sections: [{ cells: [{ badge: null, type: MY_EVENTS }, { badge: null, type: STUDENT_ABSENCES }] }]
+                    integrationsSection: []
+                    isEmailUpdateRequired: false
+                teacherWithIntegrations:
+                  summary: wolfsburger-oberschule — teacher tiles + third-party integration links
+                  value:
+                    schoolName: "Musterschule WOBS"
+                    sections:
+                      - cells:
+                          - { badge: null, type: MY_EVENTS }
+                          - { badge: null, type: CLASS_TEACHER }
+                          - { badge: { count: 0 }, type: STUDENT_ABSENCES_ADMINISTRATION }
+                          - { badge: null, type: CONTACT_HOURS }
+                    integrationsSection:
+                      - id: 2
+                        name: "Homepage"
+                        url: "https://example.invalid/?tenant_id=6763800&school=wolfsburger-oberschule"
+                        iconName: null
+                        type: WEB
+                        appId: ""
+                        hideBrowserControls: true
+                        reloadDetailsOnResume: false
+                    isEmailUpdateRequired: false
+
+  /WebUntis/api/rest/view/v1/dashboard/cards:
+    get:
+      tags: [home]
+      summary: Dashboard "cards" (announcements pinned to the home screen)
+      security:
+        - bearerAuth: []
+        - anonymousSchoolHeader: []
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dashboardCards]
+                properties:
+                  dashboardCards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DashboardCard'
+              examples:
+                empty: { value: { dashboardCards: [] } }
+                oneCard:
+                  value:
+                    dashboardCards:
+                      - id: 146
+                        title: "Login zu WebUntis und UntisMobile"
+                        subtitle: "Anleitung zum Login"
+                        hasAttachments: true
+                        headerColor: "ffa94d"
+                        orderNo: 10
+                        status: READ
+                        icon: megaphone
+
+  /WebUntis/api/rest/view/v1/dashboard/cards/status:
+    get:
+      tags: [home]
+      summary: Unread dashboard-card count (for a badge)
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [unreadCardsCount]
+                properties:
+                  unreadCardsCount: { type: integer }
+              example: { unreadCardsCount: 0 }
+
+  # ---------------------------------------------------------------------------------------------------------
+  # Messages
+  # ---------------------------------------------------------------------------------------------------------
+  /WebUntis/api/rest/view/v1/messages:
+    get:
+      tags: [messages]
+      summary: List inbox messages
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesListResponse'
+
+  "/WebUntis/api/rest/view/v1/messages/{messageId}":
+    get:
+      tags: [messages]
+      summary: Get full message content + attachments
+      parameters:
+        - $ref: '#/components/parameters/school'
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageDetail'
+              examples:
+                s3BackedAttachment:
+                  summary: Attachment stored in Untis's own S3-compatible storage (needs the attachmentstorageurl dance)
+                  value:
+                    id: 4857
+                    subject: "Beispiel-Nachricht"
+                    content: "Beispieltext der Nachricht."
+                    sender: { className: null, displayName: "Musteradmin", imageUrl: null, userId: 145 }
+                    sentDateTime: "2026-06-05T15:52:00"
+                    allowMessageDeletion: false
+                    attachments: []
+                    blobAttachment: null
+                    storageAttachments:
+                      - { id: "68d39a3f-7a7d-4aaa-b597-641d6cf121c1", name: "Beispiel.pdf" }
+                    isReply: false
+                    isReplyAllowed: false
+                    isReportMessage: false
+                    isReplyForbidden: false
+                    replyHistory: []
+                    requestConfirmation: null
+                externallyHostedAttachment:
+                  summary: Attachment hosted externally (SharePoint link) — no attachmentstorageurl call needed
+                  value:
+                    id: 11743
+                    subject: "Beispiel 2"
+                    content: "Auch auf Englisch verfügbar."
+                    sender: { className: null, displayName: "Beispiel Lehrkraft", imageUrl: null, userId: 49 }
+                    sentDateTime: "2025-12-17T07:11:00"
+                    allowMessageDeletion: true
+                    attachments:
+                      - { id: "0", name: "beispiel.pdf", downloadUrl: "https://example.invalid/beispiel.pdf" }
+                    blobAttachment: null
+                    storageAttachments: []
+                    isReply: false
+                    isReplyAllowed: true
+                    isReportMessage: false
+                    isReplyForbidden: false
+                    replyHistory: []
+                    requestConfirmation: null
+
+  /WebUntis/api/rest/view/v1/messages/status:
+    get:
+      tags: [messages]
+      summary: Unread message count (for a badge)
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [unreadMessagesCount]
+                properties:
+                  unreadMessagesCount: { type: integer }
+              example: { unreadMessagesCount: 0 }
+
+  /WebUntis/api/rest/view/v1/messages/permissions:
+    get:
+      tags: [messages]
+      summary: What the current user is allowed to do in the messages UI (compose, reply, request read receipts, ...)
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesPermissions'
+
+  "/WebUntis/api/rest/view/v1/messages/{messageId}/attachmentstorageurl":
+    get:
+      tags: [messages]
+      summary: Get a short-lived, SSE-C-encrypted download URL for an S3-backed message attachment
+      description: |
+        `storageAttachments[].id` from a message detail is passed here as `messageId` (despite the parameter
+        name, this is really the *attachment* id, not the message id — **UNKNOWN**, needs re-verification
+        against a message with more than one storage attachment to see whether it's actually keyed by message
+        or by attachment). The returned `downloadUrl` is an S3 pre-signed URL that additionally requires the
+        three `additionalHeaders` to be replayed verbatim on the follow-up `GET` to that URL (server-side
+        encryption with a customer-supplied key, SSE-C) — a plain `GET downloadUrl` without those headers will
+        fail. `downloadUrl` expires quickly (observed `X-Amz-Expires=600`, i.e. 10 minutes).
+      parameters:
+        - $ref: '#/components/parameters/school'
+        - name: messageId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentStorageUrl'
+              example:
+                additionalHeaders:
+                  - { key: "x-amz-server-side-encryption-customer-key", value: "<redacted-base64-aes-key>" }
+                  - { key: "x-amz-server-side-encryption-customer-key-md5", value: "<redacted-base64-md5>" }
+                  - { key: "host", value: "storage.webuntis.com" }
+                  - { key: "x-amz-server-side-encryption-customer-algorithm", value: "AES256" }
+                downloadUrl: "https://storage.webuntis.com/untis-sts-prod/<tenantId>/<objectId>?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=600&X-Amz-Signature=<redacted>"
+
+  # ---------------------------------------------------------------------------------------------------------
+  # Calendar
+  # ---------------------------------------------------------------------------------------------------------
+  /WebUntis/api/rest/view/v2/calendar-entry/detail:
+    get:
+      tags: [calendar]
+      summary: Get the full detail of one or more calendar entries (a period, exam, event, ...) by element + time range
+      description: |
+        Used for the "tap a period to see detail" drill-down, and (with `elementType=5`/STUDENT observed) to
+        resolve homework/notes/attachments for a specific slot. `elementType` is an integer enum whose full
+        mapping is **UNKNOWN** — only `5` (student) was captured; `startDateTime`/`endDateTime` narrow to
+        exactly the slot(s) you already know about from the grid/entries response.
+      parameters:
+        - $ref: '#/components/parameters/school'
+        - name: elementType
+          in: query
+          required: true
+          description: "Integer enum. `5` observed = STUDENT. Other values **UNKNOWN**."
+          schema: { type: integer }
+          example: 5
+        - name: elementId
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: startDateTime
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+          example: "2026-08-19T09:50:00"
+        - name: endDateTime
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+          example: "2026-08-19T11:20:00"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [calendarEntries]
+                properties:
+                  calendarEntries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CalendarEntry'
+
+  # ---------------------------------------------------------------------------------------------------------
+  # Timetable (new REST implementation)
+  # ---------------------------------------------------------------------------------------------------------
+  /WebUntis/api/rest/view/v1/timetable/menu:
+    get:
+      tags: [timetable]
+      summary: Timetable "menu" (available resources/views for the current user)
+      description: |
+        **UNKNOWN success shape** — every capture of this endpoint hit the `NO_TIMETABLES_AVAILABLE_FOR_YOUR_USER`
+        error path (anonymous bs-gfv account with no timetable access). Needs a follow-up capture against an
+        account that actually has timetable access to document the 200 response body.
+      security:
+        - bearerAuth: []
+        - anonymousSchoolHeader: []
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: "**UNKNOWN** — not captured; presumably a list of selectable resources (own class/student, or for teachers a searchable list of classes/teachers/rooms)."
+          content:
+            application/json:
+              schema: {}
+        '404':
+          description: No timetable available for this user (observed as HTTP 404, not 200-with-error-field, unlike most other REST endpoints)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: NO_TIMETABLES_AVAILABLE_FOR_YOUR_USER
+                requestId: "ae5538a079b6225703a3d044bb1a3693"
+                traceId: ""
+                validationErrors:
+                  - { path: "", errorMessage: "No timetables available for the current user!" }
+
+  /WebUntis/api/rest/view/v1/timetable/entries/settings:
+    get:
+      tags: [timetable]
+      summary: Per-resource-type display settings for the timetable UI (which overlays/highlights to show)
+      parameters:
+        - $ref: '#/components/parameters/school'
+        - name: resourceType
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ResourceType'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableEntriesSettings'
+
+  /WebUntis/api/rest/view/v1/timetable/entries:
+    get:
+      tags: [timetable]
+      summary: Get timetable entries for one or more resources over a date range
+      description: |
+        The main timetable data endpoint — supersedes `getTimetable2017`'s `periods` array with a richer,
+        pre-laid-out model (`gridEntries[].position1`..`position7`, `layoutGroup`/`layoutStartPosition`/`layoutWidth`
+        for overlapping-period rendering, `icons` for homework/notes badges). `resources` is a comma-separated
+        list of IDs of `resourceType`; `periodTypes` is a comma-separated list of `PeriodType` values you want
+        included (the app requests all known types up front). `format` selects a display-format id (see
+        `timetable/grid`'s `formatDefinitions[].id` — `8` and `1` were both observed as request values, `1` is
+        echoed back in every captured response regardless of what was requested — **UNKNOWN** what `format=8`
+        in the request actually changes, or whether the response `format` field is meant to differ from the
+        request one at all).
+      parameters:
+        - $ref: '#/components/parameters/school'
+        - name: start
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: end
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: format
+          in: query
+          required: true
+          description: "Display-format id. **UNKNOWN** exact effect — see description above."
+          schema: { type: integer }
+        - name: resourceType
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ResourceType'
+        - name: resources
+          in: query
+          required: true
+          description: Comma-separated resource IDs.
+          schema: { type: string }
+          example: "1664"
+        - name: periodTypes
+          in: query
+          required: true
+          description: Comma-separated `PeriodType` values.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/PeriodType'
+        - name: layout
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [PRIORITY]
+            description: "Only `PRIORITY` observed; other values **UNKNOWN**."
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableEntriesResponse'
+        '404':
+          description: "Observed for a resource ID with no timetable / not found for this resourceType."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errorCode: NOT_FOUND
+                requestId: "840918165983030123c850663c9d3c60"
+                traceId: ""
+                validationErrors:
+                  - { path: "", errorMessage: "One or more requested entities could not be found." }
+
+  /WebUntis/api/rest/view/v1/timetable/grid:
+    get:
+      tags: [timetable]
+      summary: Get the timetable grid layout (time slots, days, and all available display-format definitions)
+      description: |
+        Static-ish layout metadata (period start/end times per weekday, the multiple named "format" presets a
+        school can offer, e.g. a lesson-numbered grid vs. a wall-clock-hours grid) — fetched once and cached
+        client-side, then used together with `timetable/entries` to lay out the actual grid. Independent of
+        any specific resource.
+      parameters:
+        - $ref: '#/components/parameters/school'
+        - name: extendForEdgeBreakSupervisions
+          in: query
+          required: false
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableGrid'
+
+components:
+  parameters:
+    school:
+      name: school
+      in: query
+      required: true
+      description: The school's `loginName`, e.g. `cjd-koewi`. Redundant with the server hostname but sent on every call.
+      schema:
+        type: string
+      example: cjd-koewi
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT obtained either from the JSON-RPC `getAuthToken` method or from `POST .../authentication`. Sent as
+        `Authorization: Bearer <jwt>` on every `/WebUntis/api/**` REST call. See `JwtClaims` for the decoded
+        payload shape (informational only — not returned as JSON anywhere, must be base64url-decoded from the
+        token by the client if any claim is needed locally).
+    anonymousSchoolHeader:
+      type: apiKey
+      in: header
+      name: anonymous-school-base64
+      description: |
+        Alternative to `bearerAuth` for schools with `anonymousLoginEnabled: true`. Value is the school's
+        `loginName`, base64-encoded (e.g. `bs-gfv` → `YnMtZ2Z2`). Only confirmed to work on the 3 endpoints
+        that declare it as an alternative security scheme in this document — see the top-level description's
+        "Anonymous login" section for what's unconfirmed.
+
+  schemas:
+    # ---- shared / auth ----------------------------------------------------------------------------------
+    AuthObject:
+      type: object
+      required: [clientTime, otp, user]
+      description: |
+        Carried inside the single params object of most legacy JSON-RPC methods. `otp` is a 6-digit TOTP
+        computed from the app-shared-secret (RFC 6238, same algorithm as the `otp` package already used in
+        `lib/core/untis/untis_session.dart`); for anonymous logins it's the literal integer `0`. `clientTime`
+        is epoch milliseconds, used as the TOTP time step input — matching this closely to real time matters,
+        drift causes `-6002`-style auth errors (see `RpcError`).
+      properties:
+        clientTime:
+          type: integer
+          format: int64
+          description: Client epoch time in **milliseconds**.
+        otp:
+          type: integer
+          description: 6-digit TOTP, or literal `0` for anonymous logins.
+        user:
+          type: string
+          description: Username, or the literal string `#anonymous#` for anonymous logins.
+
+    RpcErrorEnvelope:
+      type: object
+      required: [id, jsonrpc, error]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        error:
+          $ref: '#/components/schemas/RpcError'
+    RpcError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          description: "Negative error codes observed, e.g. `-6003` = \"too many results\" on `searchSchool\". Full enum **UNKNOWN**."
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      description: Common REST (non-JSON-RPC) error envelope, returned with a non-2xx HTTP status.
+      required: [errorCode, requestId, traceId, validationErrors]
+      properties:
+        errorCode:
+          type: string
+          description: "String enum. Observed values: `NOT_FOUND`, `NO_TIMETABLES_AVAILABLE_FOR_YOUR_USER`. Full enum **UNKNOWN**."
+        requestId: { type: string }
+        traceId: { type: string }
+        validationErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+    ValidationError:
+      type: object
+      required: [path, errorMessage]
+      properties:
+        path: { type: string }
+        errorMessage: { type: string }
+
+    JwtClaims:
+      type: object
+      description: |
+        Informational: the decoded payload of the bearer JWT (standard JWT, header/payload/signature; not
+        itself an API response body). Both `getAuthToken` and `POST .../authentication` were observed to issue
+        structurally identical claims, except `authentication`'s token had an **empty** `host` claim where
+        `getAuthToken`'s carried the real school server hostname — unconfirmed whether that's meaningful.
+      properties:
+        tenant_id: { type: string }
+        sub: { type: string, description: "Username, same as `username`." }
+        roles: { type: string, description: "Always empty string in captures." }
+        iss: { type: string, enum: [webuntis] }
+        locale: { type: string, example: de }
+        sc: { type: string, example: de }
+        user_type: { type: string, enum: [USER] }
+        route: { type: string, description: Internal routing hostname for the backend cluster. }
+        user_id: { type: integer }
+        host: { type: string, description: "School server hostname, or empty string — see description above." }
+        sn: { type: string, description: School `loginName`. }
+        scopes: { type: string, example: "mg:r" }
+        exp: { type: integer, format: int64, description: Unix seconds. Observed ~15 minute lifetime. }
+        per:
+          type: array
+          items: { type: string }
+        iat: { type: integer, format: int64 }
+        username: { type: string }
+        sr: { type: string, description: "State/region code, e.g. `DE-NW`." }
+        person_id: { type: integer }
+
+    # ---- discovery ----------------------------------------------------------------------------------------
+    SearchSchoolRequest:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [searchSchool] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            oneOf:
+              - type: object
+                required: [search]
+                properties: { search: { type: string } }
+              - type: object
+                required: [tenantid]
+                properties: { tenantid: { type: string } }
+    SearchSchoolResult:
+      type: object
+      required: [id, jsonrpc, result]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        result:
+          type: object
+          required: [size, schools]
+          properties:
+            size: { type: integer, description: "Always observed `0` regardless of actual result count — likely vestigial/unused." }
+            schools:
+              type: array
+              items:
+                $ref: '#/components/schemas/SchoolInfo'
+    SchoolInfo:
+      type: object
+      properties:
+        server: { type: string }
+        useMobileServiceUrlAndroid: { type: boolean }
+        address: { type: string }
+        displayName: { type: string }
+        loginName: { type: string }
+        schoolId: { type: integer }
+        useMobileServiceUrlIos: { type: boolean }
+        serverUrl: { type: string, format: uri }
+        tenantId: { type: string, description: "Numeric, but sent as a string." }
+        mobileServiceUrl: { type: string, nullable: true }
+
+    LoginMeta:
+      type: object
+      required: [anonymousLoginEnabled, ssoLoginEnabled]
+      properties:
+        anonymousLoginEnabled: { type: boolean }
+        ssoLoginEnabled: { type: boolean }
+
+    # ---- legacy RPC request/response pairs -----------------------------------------------------------------
+    RpcRequestGetAppInfo:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getAppInfo] }
+        params: { type: array, maxItems: 0 }
+    RpcResponseGetAppInfo:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: object
+          properties:
+            wuVersion: { type: string, example: "2027.0.2" }
+            mobileApiVersion: { type: string, example: "2.26.0" }
+            wuMobileApiVersion: { type: integer, example: 103 }
+
+    RpcRequestGetAppSharedSecret:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getAppSharedSecret] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required: [password, userName]
+            properties:
+              password: { type: string, format: password }
+              userName: { type: string }
+    RpcResponseGetAppSharedSecret:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: string
+          description: Base32 TOTP shared secret. Persisted client-side and used to compute future `otp` values.
+
+    RpcRequestGetAuthToken:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getAuthToken] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required: [auth]
+            properties:
+              auth: { $ref: '#/components/schemas/AuthObject' }
+    RpcResponseGetAuthToken:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: object
+          required: [token]
+          properties:
+            token: { type: string, description: "JWT — see `JwtClaims`." }
+
+    RpcRequestGetUserData2017:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getUserData2017] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required: [elementId, auth]
+            properties:
+              elementId: { type: integer, description: "`0` = the logged-in user's own element." }
+              deviceOs: { type: string, description: "Seen sent by the current app as `AND`; not present in every capture." }
+              deviceOsVersion: { type: string }
+              auth: { $ref: '#/components/schemas/AuthObject' }
+    RpcResponseGetUserData2017:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: object
+          required: [masterData, userData, settings]
+          properties:
+            masterData: { $ref: '#/components/schemas/MasterData' }
+            userData: { $ref: '#/components/schemas/LegacyUserData' }
+            settings: { $ref: '#/components/schemas/LegacySettings' }
+
+    MasterData:
+      type: object
+      properties:
+        timeStamp: { type: integer, format: int64, description: "Epoch ms. Feed back into `getTimetable2017`'s `masterDataTimestamp` for change-detection/caching." }
+        absenceReasons: { type: array, items: { $ref: '#/components/schemas/AbsenceReason' } }
+        departments: { type: array, items: { $ref: '#/components/schemas/Department' } }
+        duties: { type: array, items: { $ref: '#/components/schemas/Duty' } }
+        eventReasons: { type: array, items: { $ref: '#/components/schemas/EventReason' } }
+        eventReasonGroups: { type: array, items: { $ref: '#/components/schemas/EventReasonGroup' } }
+        excuseStatuses: { type: array, items: { $ref: '#/components/schemas/ExcuseStatus' } }
+        holidays:
+          type: array
+          nullable: true
+          items: { $ref: '#/components/schemas/Holiday' }
+          description: "`null` observed for cjd-koewi/bs-gfv, a populated array for schuldorf/wolfsburger-oberschule — not simply \"empty vs non-empty\", genuinely `null`."
+        klassen: { type: array, items: { $ref: '#/components/schemas/Klasse' } }
+        rooms: { type: array, items: { $ref: '#/components/schemas/MasterDataRoom' } }
+        subjects: { type: array, items: { $ref: '#/components/schemas/MasterDataSubject' } }
+        teachers: { type: array, items: { $ref: '#/components/schemas/MasterDataTeacher' } }
+        teachingMethods: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures." }
+        schoolyears: { type: array, items: { $ref: '#/components/schemas/LegacySchoolYear' } }
+        timeGrid: { $ref: '#/components/schemas/LegacyTimeGrid' }
+    AbsenceReason:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+        active: { type: boolean }
+        automaticNotificationEnabled: { type: boolean }
+    Department:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+    Duty:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+        type:
+          type: string
+          description: "Observed: `CUSTOM`, `STEWARD`, `PREFECT`, `PREFECT_SUBST`. Enum likely not exhaustive."
+    EventReason:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+        elementType:
+          type: string
+          description: "Observed: `STUDENT`, `CLASS`. Enum likely not exhaustive."
+        groupId: { type: integer, description: "`-1` observed for the class-wide (`CLASS`) reason." }
+        active: { type: boolean }
+    EventReasonGroup:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+        active: { type: boolean }
+    ExcuseStatus:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+        excused: { type: boolean }
+        active: { type: boolean }
+    Holiday:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+    Klasse:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+        departmentId: { type: integer }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        foreColor: { type: string, nullable: true }
+        backColor: { type: string, nullable: true }
+        active: { type: boolean }
+        displayable: { type: boolean }
+    MasterDataRoom:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+        departmentId: { type: integer }
+        foreColor: { type: string, nullable: true }
+        backColor: { type: string, nullable: true }
+        active: { type: boolean }
+        displayAllowed: { type: boolean }
+    MasterDataSubject:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        longName: { type: string }
+        departmentIds: { type: array, items: { type: integer } }
+        foreColor: { type: string, nullable: true }
+        backColor: { type: string, nullable: true }
+        active: { type: boolean }
+        displayAllowed: { type: boolean }
+    MasterDataTeacher:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string, description: "Short code, e.g. teacher initials." }
+        firstName: { type: string }
+        lastName: { type: string }
+        departmentIds: { type: array, items: { type: integer } }
+        foreColor: { type: string, nullable: true }
+        backColor: { type: string, nullable: true }
+        entryDate: { type: string, format: date, nullable: true }
+        exitDate: { type: string, format: date, nullable: true }
+        active: { type: boolean }
+        displayAllowed: { type: boolean }
+    LegacySchoolYear:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+    LegacyTimeGrid:
+      type: object
+      properties:
+        days:
+          type: array
+          items:
+            type: object
+            properties:
+              day: { type: string, description: "3-letter weekday code, e.g. `MON`..`FRI`." }
+              units:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    label: { type: string, description: "Period number as a string, or a name like `MiPau` for breaks, or empty string." }
+                    startTime: { type: string, pattern: '^T\d{2}:\d{2}$', description: "Time-of-day, `T`-prefixed, e.g. `T07:55`." }
+                    endTime: { type: string, pattern: '^T\d{2}:\d{2}$' }
+
+    LegacyUserData:
+      type: object
+      description: "The `userData` block of `getUserData2017` — distinct from `MobileDataResponse.user` (`/mobile/data`) and from the app's own `UserData` model, which today conflates fields from several of these responses (see NOTES.md)."
+      properties:
+        elemType:
+          type: string
+          nullable: true
+          description: "Observed: `CLASS`, `STUDENT`, `TEACHER`, or `null` (bs-gfv anonymous)."
+        elemId: { type: integer, description: "`-1` observed for the anonymous synthetic user." }
+        displayName: { type: string, description: "Empty string for some accounts; literal `IDC_ANONYMOUSUSER` for bs-gfv anonymous — looks like an untranslated i18n key, not a real display name." }
+        schoolName: { type: string }
+        departmentId: { type: integer }
+        children: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures (would presumably be populated for a parent/guardian account)." }
+        klassenIds: { type: array, items: { type: integer } }
+        rights: { type: array, items: { type: string }, description: "Observed: `CLASSREGISTER`, `R_MY_ABSENCES`." }
+    LegacySettings:
+      type: object
+      properties:
+        showAbsenceReason: { type: boolean }
+        showAbsenceText: { type: boolean }
+        absenceCheckRequired: { type: boolean }
+        defaultAbsenceReasonId: { type: integer }
+        defaultLatenessReasonId: { type: integer }
+        defaultAbsenceEndTime: { type: string, enum: [END_OF_DAY, CUSTOM] }
+        customAbsenceEndTime: { type: string, nullable: true, pattern: '^T\d{2}:\d{2}$', description: "Set only when `defaultAbsenceEndTime` is `CUSTOM`." }
+        showCalendarDetails: { type: boolean }
+        defaultAbsenceExcuseStatusId: { type: integer }
+
+    RpcRequestGetTimetable2017:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getTimetable2017] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required: [endDate, id, startDate, type, auth]
+            properties:
+              endDate: { type: string, format: date }
+              id: { type: integer, description: "Element id, e.g. the class/klasse id." }
+              masterDataTimestamp: { type: integer, format: int64, description: "Last-seen `masterData.timeStamp`, `0` on first call." }
+              startDate: { type: string, format: date }
+              timetableTimestamp: { type: integer, format: int64 }
+              timetableTimestamps: { type: array, items: { type: integer, format: int64 } }
+              type:
+                type: string
+                description: "Observed: `CLASS`, `STUDENT`. Presumably also `TEACHER`/`ROOM`/`SUBJECT` per the general Untis element-type enum — **UNKNOWN**, unconfirmed."
+              auth: { $ref: '#/components/schemas/AuthObject' }
+    RpcResponseGetTimetable2017:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: object
+          properties:
+            timetable:
+              type: object
+              properties:
+                displayableStartDate: { type: string, format: date }
+                displayableEndDate: { type: string, format: date }
+                periods:
+                  type: array
+                  items: { $ref: '#/components/schemas/LegacyTimetablePeriod' }
+            masterData: { $ref: '#/components/schemas/MasterData' }
+    LegacyTimetablePeriod:
+      type: object
+      description: |
+        Matches the shape already modelled by `TimetablePeriod` (`lib/core/untis/models/timetable/timetable_period.dart`)
+        in the current codebase. Included here for completeness — every capture against the new server
+        returned an empty `periods: []`, so this is carried over from the pre-existing `.txt` capture
+        (`lib/core/untis/models/timetable/timetable.txt`), not re-verified against the new server.
+      properties:
+        id: { type: integer }
+        lessonId: { type: integer }
+        startDateTime: { type: string, description: "Legacy format includes a bare `Z` suffix but **no seconds**, e.g. `2023-04-17T07:55Z` — do not assume this parses as strict RFC 3339." }
+        endDateTime: { type: string }
+        foreColor: { type: string }
+        backColor: { type: string }
+        innerForeColor: { type: string }
+        innerBackColor: { type: string }
+        text:
+          type: object
+          properties:
+            lesson: { type: string }
+            substitution: { type: string }
+            info: { type: string }
+            attachments: { type: array, items: {} }
+        elements:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string, enum: [CLASS, TEACHER, SUBJECT, ROOM] }
+              id: { type: integer }
+              orgId: { type: integer }
+        can: { type: array, items: { type: string } }
+        is: { type: array, items: { type: string } }
+        homeWorks: { type: array, nullable: true, items: {} }
+        messengerChannel: { nullable: true }
+        exam: { nullable: true }
+        isOnlinePeriod: { type: boolean }
+        blockHash: { type: integer }
+
+    RpcRequestGetMessagesOfDay2017:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getMessagesOfDay2017] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required: [date, auth]
+            properties:
+              date: { type: string, format: date }
+              auth: { $ref: '#/components/schemas/AuthObject' }
+    RpcResponseGetMessagesOfDay2017:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: object
+          required: [messages]
+          properties:
+            messages:
+              type: array
+              items: { $ref: '#/components/schemas/MessageOfDay' }
+    MessageOfDay:
+      type: object
+      description: "Distinct model from `IncomingMessage`/`MessageDetail` (the REST `/messages` family) — this is the older \"message of the day\" concept, not the general inbox."
+      properties:
+        id: { type: integer }
+        subject: { type: string }
+        body: { type: string }
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer, description: "Observed literal `-1` on every attachment — likely means \"externally hosted, no numeric id\"." }
+              name: { type: string }
+              url: { type: string, format: uri }
+
+    RpcRequestGetStudentAbsences2017:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getStudentAbsences2017] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required: [includeUnExcused, startDate, endDate, includeExcused, auth]
+            properties:
+              includeUnExcused: { type: boolean }
+              startDate: { type: string, description: "ISO-ish with literal `Z` but no colon-separated offset and no seconds, e.g. `2026-08-08T12:00Z`." }
+              endDate: { type: string }
+              includeExcused: { type: boolean }
+              auth: { $ref: '#/components/schemas/AuthObject' }
+    RpcResponseGetStudentAbsences2017:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: object
+          required: [absences]
+          properties:
+            absences:
+              type: array
+              items: {}
+              description: "**UNKNOWN** item shape — always empty in captures across all 4 schools. Needs a follow-up capture against an account with a real recorded absence."
+
+    RpcRequestGetExams2017:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getExams2017] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required: [endDate, id, startDate, type, auth]
+            properties:
+              endDate: { type: string, format: date }
+              id: { type: integer }
+              startDate: { type: string, format: date }
+              type: { type: string, description: "Observed: `CLASS`, `STUDENT`." }
+              auth: { $ref: '#/components/schemas/AuthObject' }
+    RpcResponseGetExams2017:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: object
+          required: [type, id, exams]
+          properties:
+            type: { type: string }
+            id: { type: integer }
+            exams:
+              type: array
+              items: {}
+              description: "**UNKNOWN** item shape — always empty in captures. The pre-existing `.txt` capture at `lib/core/untis/models/exams/exams.txt` (older server generation) may still be roughly accurate but was not re-verified against this server generation; re-capture against a school with real exam data before trusting it."
+
+    RpcRequestGetPeriodData2017:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getPeriodData2017] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required: [ttIds, auth]
+            properties:
+              ttIds:
+                type: array
+                items: { type: integer }
+                description: "IDs from `calendar-entry/detail`'s `singleEntries[].id` / `gridEntries[].ids[]`."
+              auth: { $ref: '#/components/schemas/AuthObject' }
+    RpcResponseGetPeriodData2017:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: object
+          required: [referencedStudents, dataByTTId]
+          properties:
+            referencedStudents:
+              type: array
+              items: {}
+              description: "**UNKNOWN** item shape — always empty in captures."
+            dataByTTId:
+              type: object
+              description: Map keyed by `ttId` (as a string).
+              additionalProperties:
+                $ref: '#/components/schemas/PeriodData'
+    PeriodData:
+      type: object
+      properties:
+        ttId: { type: integer }
+        absenceChecked: { type: boolean }
+        studentIds: { type: array, nullable: true, items: { type: integer } }
+        absences: { type: array, nullable: true, items: {}, description: "**UNKNOWN** item shape." }
+        classRegEvents: { type: array, nullable: true, items: {}, description: "**UNKNOWN** item shape." }
+        exemptions: { type: array, nullable: true, items: {}, description: "**UNKNOWN** item shape." }
+        prioritizedAttendances: { type: array, nullable: true, items: {}, description: "**UNKNOWN** item shape." }
+        text: { type: string, nullable: true }
+        topic: { type: string, nullable: true }
+        homeWorks:
+          type: array
+          items: { $ref: '#/components/schemas/HomeworkItem' }
+        seatingPlan: { nullable: true, description: "**UNKNOWN** shape." }
+        classRoles: { nullable: true, description: "**UNKNOWN** shape." }
+        can: { type: array, items: { type: string } }
+        studentAssignments: { nullable: true, description: "**UNKNOWN** shape." }
+
+    RpcRequestGetHomeWork2017:
+      type: object
+      required: [id, jsonrpc, method, params]
+      properties:
+        id: { type: string }
+        jsonrpc: { type: string, enum: ["2.0"] }
+        method: { type: string, enum: [getHomeWork2017] }
+        params:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: object
+            required: [endDate, id, startDate, type, auth]
+            properties:
+              endDate: { type: string, format: date }
+              id: { type: integer }
+              startDate: { type: string, format: date }
+              type: { type: string, description: "Observed: `CLASS`." }
+              auth: { $ref: '#/components/schemas/AuthObject' }
+    RpcResponseGetHomeWork2017:
+      type: object
+      required: [jsonrpc, id, result]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id: { type: string }
+        result:
+          type: object
+          required: [homeWorks, lessonsById]
+          properties:
+            homeWorks:
+              type: array
+              items: { $ref: '#/components/schemas/HomeworkItem' }
+            lessonsById:
+              type: object
+              description: Map keyed by `lessonId` (as a string).
+              additionalProperties:
+                $ref: '#/components/schemas/LessonRef'
+    HomeworkItem:
+      type: object
+      properties:
+        id: { type: integer }
+        lessonId: { type: integer }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        text: { type: string }
+        remark: { type: string, nullable: true }
+        completed: { type: boolean }
+        attachments: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures." }
+    LessonRef:
+      type: object
+      properties:
+        id: { type: integer }
+        subjectId: { type: integer }
+        klassenIds: { type: array, items: { type: integer } }
+        teacherIds: { type: array, items: { type: integer } }
+
+    # ---- REST auth ------------------------------------------------------------------------------------------
+    AuthenticationResponse:
+      type: object
+      required: [jwt, isPasswordChangeRequired, isEmailUpdateRequired]
+      properties:
+        jwt: { type: string, description: "JWT — see `JwtClaims`." }
+        isPasswordChangeRequired: { type: boolean }
+        isEmailUpdateRequired: { type: boolean }
+
+    # ---- session ---------------------------------------------------------------------------------------------
+    MobileDataResponse:
+      type: object
+      required: [tenant, user]
+      properties:
+        schoolYear:
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/SchoolYear' }]
+          description: "`null` observed for cjd-koewi/bs-gfv even though they clearly have a school year — **UNKNOWN** why (possibly only populated once some other onboarding step completes)."
+        tenant: { $ref: '#/components/schemas/Tenant' }
+        user:
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/MobileUser' }]
+          description: "`null` for anonymous sessions (bs-gfv)."
+    SchoolYear:
+      type: object
+      properties:
+        dateRange:
+          type: object
+          properties:
+            start: { type: string, format: date-time }
+            end: { type: string, format: date-time }
+        id: { type: integer }
+        name: { type: string }
+    Tenant:
+      type: object
+      properties:
+        id: { type: string, description: "Numeric, sent as a string. Same value as `SchoolInfo.tenantId`." }
+        displayName: { type: string }
+        wuVersion: { type: string }
+        language: { type: string, description: "Always empty string in captures — **UNKNOWN** whether ever populated." }
+        schoolLoginName: { type: string }
+    MobileUser:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        person:
+          type: object
+          properties:
+            id: { type: integer }
+            displayName: { type: string }
+            imageUrl: { type: string, nullable: true }
+        referencedStudents:
+          type: array
+          items: {}
+          description: "**UNKNOWN** item shape — presumably populated for a parent/guardian account with linked children; always empty in these captures."
+        locale: { type: string, example: de }
+        departmentId: { type: integer }
+        role:
+          type: string
+          description: "Observed: `KLASSE`, `STUDENT`, `TEACHER`. Enum likely not exhaustive (e.g. a parent role is plausible given `referencedStudents`)."
+        permissions:
+          type: array
+          items: { type: string }
+          description: "Observed: `READ_MESSAGES`, `CLASS_REGISTER`, `CHANGE_OWN_PASSWORD`."
+
+    PushRegistration:
+      type: object
+      required: [deviceId, deviceOs, environment, fcmToken, product]
+      properties:
+        deviceId:
+          type: string
+          description: Client-generated stable device identifier (arbitrary hex string).
+        deviceOs: { type: string, enum: [ANDROID] }
+        environment: { type: string, enum: [develop], description: "Only `develop` observed — likely also has a `production` value for release builds." }
+        fcmToken: { type: string, description: "Firebase Cloud Messaging registration token. Sensitive — treat like a credential, never log or commit." }
+        product: { type: string, enum: [um], description: "\"um\" = Untis Mobile, presumably." }
+
+    # ---- home / dashboard -------------------------------------------------------------------------------------
+    HomeResponse:
+      type: object
+      required: [schoolName, sections, integrationsSection, isEmailUpdateRequired]
+      properties:
+        schoolName: { type: string }
+        sections:
+          type: array
+          items:
+            type: object
+            required: [cells]
+            properties:
+              cells:
+                type: array
+                items: { $ref: '#/components/schemas/HomeCell' }
+        integrationsSection:
+          type: array
+          items: { $ref: '#/components/schemas/IntegrationLink' }
+        isEmailUpdateRequired: { type: boolean }
+    HomeCell:
+      type: object
+      required: [badge, type]
+      properties:
+        badge:
+          nullable: true
+          type: object
+          properties:
+            count: { type: integer }
+        type:
+          type: string
+          description: "Observed: `MY_EVENTS`, `STUDENT_ABSENCES`, `CLASS_TEACHER`, `STUDENT_ABSENCES_ADMINISTRATION`, `CONTACT_HOURS`. Enum not exhaustive — this is the main home-screen tile registry and almost certainly has more values for other schools/roles (e.g. exams, homework, messages tiles were not seen here but likely exist)."
+    IntegrationLink:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        url: { type: string, format: uri, description: "Often templated with `tenant_id`/`school` (and sometimes lesson/period context) query params for deep-linking into the target app/site." }
+        iconName: { type: string, nullable: true }
+        type: { type: string, enum: [WEB, APP] }
+        appId: { type: string, description: "Android package id when `type: APP`, empty string otherwise." }
+        hideBrowserControls: { type: boolean }
+        reloadDetailsOnResume: { type: boolean }
+
+    DashboardCard:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        subtitle: { type: string }
+        hasAttachments: { type: boolean }
+        headerColor: { type: string, description: "6-digit hex color, no leading `#`." }
+        orderNo: { type: integer }
+        status: { type: string, description: "Observed: `READ`. Presumably also `UNREAD` — **UNKNOWN**, not directly observed." }
+        icon: { type: string, description: "Icon identifier, e.g. `megaphone`. Free-form string, not a closed enum as far as observed." }
+
+    # ---- messages ----------------------------------------------------------------------------------------------
+    MessagesListResponse:
+      type: object
+      required: [incomingMessages, readConfirmationMessages]
+      properties:
+        incomingMessages:
+          type: array
+          items: { $ref: '#/components/schemas/IncomingMessage' }
+        readConfirmationMessages:
+          type: array
+          items: {}
+          description: "**UNKNOWN** item shape — always empty in captures (would presumably hold messages awaiting a read-confirmation reply, see `MessagesPermissions.allowRequestReadConfirmation`)."
+    IncomingMessage:
+      type: object
+      properties:
+        id: { type: integer }
+        subject: { type: string }
+        contentPreview: { type: string, description: Truncated/plain-text preview of `content`. }
+        sender: { $ref: '#/components/schemas/MessageSender' }
+        sentDateTime: { type: string, format: date-time }
+        allowMessageDeletion: { type: boolean }
+        hasAttachments: { type: boolean }
+        isMessageRead: { type: boolean }
+        isReply: { type: boolean }
+        isReplyAllowed: { type: boolean }
+    MessageSender:
+      type: object
+      properties:
+        className: { type: string, nullable: true }
+        displayName: { type: string }
+        imageUrl: { type: string, nullable: true }
+        userId: { type: integer }
+    MessageDetail:
+      type: object
+      properties:
+        id: { type: integer }
+        subject: { type: string }
+        content: { type: string, description: "Full message body. May contain literal `\\n` newlines." }
+        sender: { $ref: '#/components/schemas/MessageSender' }
+        sentDateTime: { type: string, format: date-time }
+        allowMessageDeletion: { type: boolean }
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/ExternalAttachment' }
+        blobAttachment:
+          nullable: true
+          description: "**UNKNOWN** shape — always `null` in captures. A third attachment mechanism alongside `attachments`/`storageAttachments`; name suggests an inline base64 blob."
+        storageAttachments:
+          type: array
+          items: { $ref: '#/components/schemas/StorageAttachment' }
+        isReply: { type: boolean }
+        isReplyAllowed: { type: boolean }
+        isReportMessage: { type: boolean }
+        isReplyForbidden: { type: boolean }
+        replyHistory:
+          type: array
+          items: {}
+          description: "**UNKNOWN** item shape — always empty in captures."
+        requestConfirmation:
+          nullable: true
+          description: "**UNKNOWN** shape — always `null` in captures. Presumably relates to `MessagesPermissions.allowRequestReadConfirmation`."
+    ExternalAttachment:
+      type: object
+      description: Externally-hosted attachment (e.g. a SharePoint link) — no signed-URL dance needed, `downloadUrl` is directly usable.
+      properties:
+        id: { type: string, description: "Observed literal `\"0\"` on every attachment of this kind — likely means \"no real numeric id, externally hosted\"." }
+        name: { type: string }
+        downloadUrl: { type: string, format: uri }
+    StorageAttachment:
+      type: object
+      description: "Attachment stored in Untis's own S3-compatible storage — requires the `attachmentstorageurl` endpoint to resolve an actual download URL."
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    MessagesPermissions:
+      type: object
+      properties:
+        recipientOptions:
+          type: array
+          items: {}
+          description: "**UNKNOWN** item shape — always empty in captures (none of the 4 accounts could compose messages)."
+        allowRequestReadConfirmation: { type: boolean }
+        recipientSearchMaxResult: { type: integer }
+        showDraftsTab: { type: boolean }
+        showSentTab: { type: boolean }
+        canForbidReplies: { type: boolean }
+        maxFileSize: { type: integer, description: Bytes. }
+        maxFileCount: { type: integer }
+
+    AttachmentStorageUrl:
+      type: object
+      required: [additionalHeaders, downloadUrl]
+      properties:
+        additionalHeaders:
+          type: array
+          items:
+            type: object
+            required: [key, value]
+            properties:
+              key: { type: string }
+              value: { type: string }
+        downloadUrl: { type: string, format: uri }
+
+    # ---- calendar --------------------------------------------------------------------------------------------
+    CalendarEntry:
+      type: object
+      properties:
+        id: { type: integer }
+        previousId: { type: integer, nullable: true }
+        nextId: { type: integer, nullable: true }
+        absenceReasonId: { type: integer, nullable: true }
+        booking: { nullable: true, description: "**UNKNOWN** shape." }
+        color: { type: string, nullable: true, description: "6-digit hex, no `#`." }
+        endDateTime: { type: string, format: date-time }
+        exam: { nullable: true, description: "**UNKNOWN** shape — always `null` in captures; presumably populated when `type: EXAM`." }
+        homeworks:
+          type: array
+          items: {}
+          description: "**UNKNOWN** item shape — always empty in captures; presumably shaped like `HomeworkItem`."
+        klasses:
+          type: array
+          items: { $ref: '#/components/schemas/CalendarNamedRef' }
+        lesson:
+          type: object
+          properties:
+            lessonId: { type: integer }
+            lessonNumber: { type: integer }
+        lessonInfo: { type: string, nullable: true }
+        mainStudentGroup:
+          nullable: true
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+        notesAll: { type: string, nullable: true }
+        notesAllFiles: { type: array, items: {} }
+        notesStaff: { type: string, nullable: true }
+        notesStaffFiles: { type: array, items: {} }
+        originalCalendarEntry: { nullable: true, description: "**UNKNOWN** shape — presumably a nested `CalendarEntry` reference for moved/rescheduled periods." }
+        permissions:
+          type: array
+          items: { type: string }
+          description: "Observed: `READ_HOMEWORK`, `WRITE_NOTES_STAFF`, `WRITE_NOTES_ALL`."
+        resources: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures." }
+        rooms:
+          type: array
+          items: { $ref: '#/components/schemas/CalendarNamedRefWithStatus' }
+        singleEntries:
+          type: array
+          items: { $ref: '#/components/schemas/CalendarSingleEntry' }
+        startDateTime: { type: string, format: date-time }
+        status:
+          type: string
+          description: "Observed: `TAKING_PLACE`, `SUBSTITUTION`, `CANCELLED`. Enum likely not exhaustive."
+        students: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures." }
+        subType:
+          type: object
+          properties:
+            displayInPeriodDetails: { type: boolean }
+            displayName: { type: string }
+            id: { type: integer }
+        subject:
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/CalendarNamedRef' }]
+        substText: { type: string, nullable: true }
+        teachers:
+          type: array
+          items: { $ref: '#/components/schemas/CalendarNamedRefWithStatus' }
+        teachingContent: { type: string, nullable: true }
+        teachingContentFiles: { type: array, items: {} }
+        type:
+          type: string
+          description: "Observed: `NORMAL_TEACHING_PERIOD`, `EVENT`. Enum likely not exhaustive (see `PeriodType` for the fuller list requested by `timetable/entries`)."
+        videoCall: { nullable: true, description: "**UNKNOWN** shape." }
+        integrationsSection:
+          type: array
+          items: { $ref: '#/components/schemas/IntegrationLink' }
+    CalendarNamedRef:
+      type: object
+      properties:
+        displayName: { type: string }
+        hasTimetable: { type: boolean }
+        id: { type: integer }
+        longName: { type: string }
+        shortName: { type: string }
+    CalendarNamedRefWithStatus:
+      allOf:
+        - $ref: '#/components/schemas/CalendarNamedRef'
+        - type: object
+          properties:
+            status: { type: string, description: "Observed: `REGULAR`, `SUBSTITUTION`." }
+            imageUrl: { type: string, nullable: true, description: "Only present on teacher refs." }
+    CalendarSingleEntry:
+      type: object
+      description: "One physical lesson slot within a (possibly block/double) `CalendarEntry`."
+      properties:
+        id: { type: integer }
+        previousId: { type: integer, nullable: true }
+        nextId: { type: integer, nullable: true }
+        createdAt: { type: string, format: date-time, nullable: true }
+        endDateTime: { type: string, format: date-time }
+        lastUpdate: { type: string, format: date-time, nullable: true }
+        permissions: { type: array, items: { type: string } }
+        startDateTime: { type: string, format: date-time }
+        teachingContent: { type: string, nullable: true }
+        teachingContentFiles: { type: array, items: {} }
+        integrationsSection:
+          type: array
+          items: { $ref: '#/components/schemas/IntegrationLink' }
+
+    # ---- timetable (new REST) ---------------------------------------------------------------------------------
+    ResourceType:
+      type: string
+      description: "Observed: `CLASS`, `STUDENT`. Presumably also `TEACHER`/`ROOM`/`SUBJECT` — **UNKNOWN**, unconfirmed against this server generation."
+      enum: [CLASS, STUDENT]
+    PeriodType:
+      type: string
+      description: "Full list as requested by the app's `timetable/entries` call (not all individually confirmed to ever be *returned* — only `NORMAL_TEACHING_PERIOD` and `EVENT` were observed in response data)."
+      enum:
+        - NORMAL_TEACHING_PERIOD
+        - ADDITIONAL_PERIOD
+        - STAND_BY_PERIOD
+        - OFFICE_HOUR
+        - EXAM
+        - BREAK_SUPERVISION
+        - EVENT
+        - MEETING
+        - PLATFORM_CALENDAR_EVENT
+        - PERSONAL_CALENDAR_EVENT
+
+    TimetableEntriesSettings:
+      type: object
+      description: All fields boolean; every field toggles a display overlay in the timetable UI.
+      properties:
+        showSymbols: { type: boolean }
+        showTeacherAbsences: { type: boolean }
+        showStudentAbsences: { type: boolean }
+        showRoomLocks: { type: boolean }
+        showResourceLocks: { type: boolean }
+        showForeignSubstitutions: { type: boolean }
+        showICal: { type: boolean }
+        showICalExport: { type: boolean }
+        showAllDropdownElements: { type: boolean }
+        highlightChanges: { type: boolean }
+        highlightExams: { type: boolean }
+        highlightCancellations: { type: boolean }
+        highlightExternalEntries: { type: boolean }
+
+    TimetableEntriesResponse:
+      type: object
+      required: [format, days, errors]
+      properties:
+        format: { type: integer, description: "Echoes a display-format id — see the operation description for the open question about whether the request's `format` value actually changes this." }
+        days:
+          type: array
+          items: { $ref: '#/components/schemas/TimetableDay' }
+        errors:
+          type: array
+          items: {}
+          description: "**UNKNOWN** item shape — always empty in captures; likely `ValidationError`-shaped, for partial failures within an otherwise-200 multi-resource request."
+    TimetableDay:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        resourceType: { $ref: '#/components/schemas/ResourceType' }
+        resource:
+          type: object
+          properties:
+            id: { type: integer }
+            shortName: { type: string }
+            longName: { type: string }
+            displayName: { type: string, description: "Observed always empty string — **UNKNOWN** when populated." }
+        status:
+          type: string
+          description: "Observed: `REGULAR`, `NOT_ALLOWED` (e.g. querying dates outside the school's active school-year range)."
+        dayEntries: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures; distinct from `gridEntries`, name suggests all-day entries." }
+        gridEntries:
+          type: array
+          items: { $ref: '#/components/schemas/GridEntry' }
+        backEntries: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures." }
+    GridEntry:
+      type: object
+      description: |
+        One rendered timetable cell. `ids` groups together the underlying period-instance id(s) this cell
+        represents (>1 when consecutive identical periods are merged into one visual block, e.g. a double
+        lesson) — these are the ids to pass into `getPeriodData2017`'s `ttIds` or `calendar-entry/detail`'s
+        `elementId`. `position1`..`position7` are independently-nullable *slots* the UI renders in order
+        (observed usage: 1=teacher, 2=subject, 3=room; 4-7 unobserved but presumably resources/classes/text
+        depending on `resourceType`) — do not assume a fixed teacher/subject/room mapping without re-checking
+        against a `resourceType: TEACHER` or `resourceType: CLASS` response, only `STUDENT` was captured here
+        (**UNKNOWN**).
+      properties:
+        ids: { type: array, items: { type: integer } }
+        duration:
+          type: object
+          properties:
+            start: { type: string, format: date-time, description: "No seconds, e.g. `2026-08-17T08:00`." }
+            end: { type: string, format: date-time }
+        type: { $ref: '#/components/schemas/PeriodType' }
+        status: { type: string, description: "Observed: `REGULAR`, `CHANGED`." }
+        statusDetail: { type: string, nullable: true, description: "**UNKNOWN** — always `null` in captures." }
+        name: { type: string, nullable: true }
+        layoutStartPosition: { type: integer, description: "Observed always `0`. Presumably a 0-1000 horizontal offset within the day column for overlapping periods, paired with `layoutWidth`." }
+        layoutWidth: { type: integer, description: "Observed always `1000` (i.e. full width) — presumably out of 1000, shrinks when periods overlap." }
+        layoutGroup: { type: integer, description: "Sequential index of this period within the day (1-based)." }
+        color: { type: string, nullable: true, description: "6-digit hex, no `#`." }
+        notesAll: { type: string }
+        icons:
+          type: array
+          items: { type: string }
+          description: "Observed: `HOMEWORK`, `NOTES`. Enum likely not exhaustive."
+        position1: { nullable: true, type: array, items: { $ref: '#/components/schemas/GridEntryPositionItem' } }
+        position2: { nullable: true, type: array, items: { $ref: '#/components/schemas/GridEntryPositionItem' } }
+        position3: { nullable: true, type: array, items: { $ref: '#/components/schemas/GridEntryPositionItem' } }
+        position4: { nullable: true, type: array, items: { $ref: '#/components/schemas/GridEntryPositionItem' } }
+        position5: { nullable: true, type: array, items: { $ref: '#/components/schemas/GridEntryPositionItem' } }
+        position6: { nullable: true, type: array, items: { $ref: '#/components/schemas/GridEntryPositionItem' } }
+        position7: { nullable: true, type: array, items: { $ref: '#/components/schemas/GridEntryPositionItem' } }
+        texts:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string, description: "Observed: `SUBSTITUTION_TEXT`." }
+              text: { type: string }
+        lessonText: { type: string }
+        lessonInfo: { type: string, nullable: true }
+        substitutionText: { type: string }
+        userName: { type: string, nullable: true, description: "**UNKNOWN** — always `null` in captures." }
+        moved: { nullable: true, description: "**UNKNOWN** shape." }
+        durationTotal: { nullable: true, description: "**UNKNOWN** shape." }
+        link: { nullable: true, description: "**UNKNOWN** shape." }
+    GridEntryPositionItem:
+      type: object
+      properties:
+        current: { $ref: '#/components/schemas/GridEntryPositionElement' }
+        removed:
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/GridEntryPositionElement' }]
+          description: "**UNKNOWN** — always `null` in captures; presumably populated for a substitution to show the struck-through original alongside `current`."
+    GridEntryPositionElement:
+      type: object
+      properties:
+        type: { type: string, description: "Observed: `TEACHER`, `SUBJECT`, `ROOM`." }
+        status: { type: string, description: "Observed: `REGULAR`." }
+        shortName: { type: string }
+        longName: { type: string }
+        displayName: { type: string }
+        displayNameLabel: { type: string, description: "Observed always `NAME` — **UNKNOWN** other values / purpose." }
+
+    TimetableGrid:
+      type: object
+      properties:
+        firstDayOfWeek: { type: string, enum: [MO], description: "Only `MO` observed. Presumably follows locale for schools with a Sunday-first week — **UNKNOWN**." }
+        studentFormat: { type: integer, description: "Default `formatDefinitions[].id` to use for `resourceType: STUDENT`." }
+        classFormat: { type: integer }
+        subjectFormat: { type: integer }
+        teacherFormat: { type: integer }
+        roomFormat: { type: integer }
+        resourceFormat: { type: integer, description: "Observed `-1`, matching `formatDefinitions[].id: -1` (`RESOURCE_TIMETABLE_DEFAULT`)." }
+        formatDefinitions:
+          type: array
+          items: { $ref: '#/components/schemas/FormatDefinition' }
+    FormatDefinition:
+      type: object
+      properties:
+        id: { type: integer, description: "`-1` is the synthetic `RESOURCE_TIMETABLE_DEFAULT` entry; `0`/`1`/etc. are school-configured named formats." }
+        name: { type: string }
+        longname: { type: string }
+        showStartEndTimeOfSlots: { type: boolean }
+        showStartEndTime: { type: boolean }
+        showCancellations: { type: boolean }
+        showExternalCalendars: { type: boolean }
+        hideDetails: { type: boolean }
+        minRows: { type: integer }
+        duration:
+          type: object
+          description: "Note: **no `T` prefix** here, unlike `LegacyTimeGrid`'s `T07:55`-style times — just `\"07:30\"`."
+          properties:
+            start: { type: string, pattern: '^\d{2}:\d{2}$' }
+            end: { type: string, pattern: '^\d{2}:\d{2}$' }
+        timeGridType: { type: string, enum: [LESSON_GRID, CLOCK_HOURS] }
+        timeGridDays:
+          type: array
+          items: { type: string, enum: [MO, TU, WE, TH, FR, SA, SU] }
+        timeGridSlots:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string, nullable: true }
+              number: { type: integer, nullable: true, description: "`null` observed on the non-lesson-numbered (`CLOCK_HOURS`) and one `LESSON_GRID` format — not reliably present." }
+              duration:
+                type: object
+                properties:
+                  start: { type: string, pattern: '^\d{2}:\d{2}$' }
+                  end: { type: string, pattern: '^\d{2}:\d{2}$' }

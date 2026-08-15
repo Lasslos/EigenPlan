@@ -51,4 +51,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-
+credentials.txt
+credentials.csv

@@ -1,0 +1,68 @@
+# getAuthToken
+
+```
+POST https://cjd-koewi.webuntis.com/WebUntis/jsonrpc_intern.do?school=cjd-koewi&m=getAuthToken&a=false&s=cjd-koewi.webuntis.com&v=a6.7.0
+```
+
+JSON-RPC 2.0, method `getAuthToken`. Exchanges an OTP (computed from the app-shared-secret) for a bearer JWT
+used on every subsequent `/WebUntis/api/**` REST call.
+
+## Request
+
+```json
+{
+  "id": "untis-mobile-android-6.7.0",
+  "jsonrpc": "2.0",
+  "method": "getAuthToken",
+  "params": [
+    {
+      "auth": {
+        "clientTime": 1786788458268,
+        "otp": 730465,
+        "user": "Q1"
+      }
+    }
+  ]
+}
+```
+
+## Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "untis-mobile-android-6.7.0",
+  "result": {
+    "token": "<jwt — decoded payload below>"
+  }
+}
+```
+
+Decoded JWT payload:
+
+```json
+{
+  "tenant_id": "5237400",
+  "sub": "Q1",
+  "roles": "",
+  "iss": "webuntis",
+  "locale": "de",
+  "sc": "de",
+  "user_type": "USER",
+  "route": "herakles2.internal.webuntis.com",
+  "user_id": 134,
+  "host": "cjd-koewi.webuntis.com",
+  "sn": "cjd-koewi",
+  "scopes": "mg:r",
+  "exp": 1786789359,
+  "per": ["mg:r"],
+  "iat": 1786788459,
+  "username": "Q1",
+  "sr": "DE-NW",
+  "person_id": 1664
+}
+```
+
+Compare against `04_authentication`'s JWT for the same account: identical claim set, except `host` is
+populated here (the school server hostname) where `/authentication`'s token had it empty. Unconfirmed whether
+that difference is meaningful for which endpoints will accept the token — see `../spec/NOTES.md`.

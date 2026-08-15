@@ -1,0 +1,442 @@
+# GET /WebUntis/api/rest/view/v1/timetable/entries
+
+```
+GET https://cjd-koewi.webuntis.com/WebUntis/api/rest/view/v1/timetable/entries?start=2026-08-17&end=2026-08-23&format=8&resourceType=CLASS&resources=1664&periodTypes=NORMAL_TEACHING_PERIOD%2CADDITIONAL_PERIOD%2CSTAND_BY_PERIOD%2COFFICE_HOUR%2CEXAM%2CBREAK_SUPERVISION%2CEVENT%2CMEETING%2CPLATFORM_CALENDAR_EVENT%2CPERSONAL_CALENDAR_EVENT&layout=PRIORITY&school=cjd-koewi
+```
+
+**Auth:** Bearer token required.
+
+The main timetable data endpoint — supersedes `getTimetable2017`'s flat `periods` array with a pre-laid-out
+grid model (`gridEntries[].position1`..`position7`, `layoutGroup`/`layoutStartPosition`/`layoutWidth` for
+overlapping-period rendering, `icons` for homework/notes badges). See `../spec/openapi.yaml`'s `GridEntry`
+schema and `../spec/NOTES.md` §4 for the full field-by-field breakdown.
+
+## Response — cjd-koewi (404, resource not found for this school/id combination)
+
+```json
+{
+  "errorCode": "NOT_FOUND",
+  "requestId": "840918165983030123c850663c9d3c60",
+  "traceId": "",
+  "validationErrors": [
+    {
+      "path": "",
+      "errorMessage": "One or more requested entities could not be found."
+    }
+  ]
+}
+```
+
+## Response — schuldorf (200, two lesson slots on two different days)
+
+```json
+
+{
+  "format": 1,
+  "days": [
+    {
+      "date": "2026-08-17",
+      "resourceType": "STUDENT",
+      "resource": {
+        "id": 4379,
+        "shortName": "musterschueler",
+        "longName": "Mustermann",
+        "displayName": ""
+      },
+      "status": "REGULAR",
+      "dayEntries": [],
+      "gridEntries": [
+        {
+          "ids": [
+            6575102,
+            6575105
+          ],
+          "duration": {
+            "start": "2026-08-17T08:00",
+            "end": "2026-08-17T09:35"
+          },
+          "type": "NORMAL_TEACHING_PERIOD",
+          "status": "REGULAR",
+          "statusDetail": null,
+          "name": null,
+          "layoutStartPosition": 0,
+          "layoutWidth": 1000,
+          "layoutGroup": 1,
+          "color": "bfc8cf",
+          "notesAll": "",
+          "icons": [],
+          "position1": [
+            {
+              "current": {
+                "type": "TEACHER",
+                "status": "REGULAR",
+                "shortName": "MusL",
+                "longName": "Musterlehrerin",
+                "displayName": "MusL",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position2": [
+            {
+              "current": {
+                "type": "SUBJECT",
+                "status": "REGULAR",
+                "shortName": "G",
+                "longName": "Geschichte",
+                "displayName": "G",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position3": [
+            {
+              "current": {
+                "type": "ROOM",
+                "status": "REGULAR",
+                "shortName": "14-10",
+                "longName": "14-10",
+                "displayName": "14-10",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position4": null,
+          "position5": null,
+          "position6": null,
+          "position7": null,
+          "texts": [],
+          "lessonText": "",
+          "lessonInfo": null,
+          "substitutionText": "",
+          "userName": null,
+          "moved": null,
+          "durationTotal": null,
+          "link": null
+        },
+        {
+          "ids": [
+            6503417,
+            6503420
+          ],
+          "duration": {
+            "start": "2026-08-17T09:50",
+            "end": "2026-08-17T11:20"
+          },
+          "type": "NORMAL_TEACHING_PERIOD",
+          "status": "REGULAR",
+          "statusDetail": null,
+          "name": null,
+          "layoutStartPosition": 0,
+          "layoutWidth": 1000,
+          "layoutGroup": 2,
+          "color": "bfc8cf",
+          "notesAll": "",
+          "icons": [],
+          "position1": [
+            {
+              "current": {
+                "type": "TEACHER",
+                "status": "REGULAR",
+                "shortName": "MusA",
+                "longName": "Musterlehrerin",
+                "displayName": "MusA",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position2": [
+            {
+              "current": {
+                "type": "SUBJECT",
+                "status": "REGULAR",
+                "shortName": "D",
+                "longName": "Deutsch",
+                "displayName": "D",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position3": [
+            {
+              "current": {
+                "type": "ROOM",
+                "status": "REGULAR",
+                "shortName": "14-10",
+                "longName": "14-10",
+                "displayName": "14-10",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position4": null,
+          "position5": null,
+          "position6": null,
+          "position7": null,
+          "texts": [],
+          "lessonText": "",
+          "lessonInfo": null,
+          "substitutionText": "",
+          "userName": null,
+          "moved": null,
+          "durationTotal": null,
+          "link": null
+        }
+      ],
+      "backEntries": []
+    },
+    {
+      "date": "2026-08-18",
+      "resourceType": "STUDENT",
+      "resource": {
+        "id": 4379,
+        "shortName": "musterschueler",
+        "longName": "Mustermann",
+        "displayName": ""
+      },
+      "status": "REGULAR",
+      "dayEntries": [],
+      "gridEntries": [
+        {
+          "ids": [
+            6484506,
+            6484509
+          ],
+          "duration": {
+            "start": "2026-08-18T08:00",
+            "end": "2026-08-18T09:35"
+          },
+          "type": "NORMAL_TEACHING_PERIOD",
+          "status": "REGULAR",
+          "statusDetail": null,
+          "name": null,
+          "layoutStartPosition": 0,
+          "layoutWidth": 1000,
+          "layoutGroup": 1,
+          "color": "bfc8cf",
+          "notesAll": "",
+          "icons": [],
+          "position1": [
+            {
+              "current": {
+                "type": "TEACHER",
+                "status": "REGULAR",
+                "shortName": "MusS",
+                "longName": "Musterlehrer",
+                "displayName": "MusS",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position2": [
+            {
+              "current": {
+                "type": "SUBJECT",
+                "status": "REGULAR",
+                "shortName": "CH",
+                "longName": "Chemie",
+                "displayName": "CH",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position3": [
+            {
+              "current": {
+                "type": "ROOM",
+                "status": "REGULAR",
+                "shortName": "28-CH2",
+                "longName": "Chemie 2",
+                "displayName": "28-CH2",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position4": null,
+          "position5": null,
+          "position6": null,
+          "position7": null,
+          "texts": [],
+          "lessonText": "",
+          "lessonInfo": null,
+          "substitutionText": "",
+          "userName": null,
+          "moved": null,
+          "durationTotal": null,
+          "link": null
+        },
+        {
+          "ids": [
+            6660606
+          ],
+          "duration": {
+            "start": "2026-08-18T09:50",
+            "end": "2026-08-18T10:35"
+          },
+          "type": "NORMAL_TEACHING_PERIOD",
+          "status": "CHANGED",
+          "statusDetail": null,
+          "name": null,
+          "layoutStartPosition": 0,
+          "layoutWidth": 1000,
+          "layoutGroup": 2,
+          "color": "bfc8cf",
+          "notesAll": "",
+          "icons": [
+            "HOMEWORK",
+            "NOTES"
+          ],
+          "position1": [
+            {
+              "current": {
+                "type": "TEACHER",
+                "status": "REGULAR",
+                "shortName": "MusW",
+                "longName": "Musterlehrer",
+                "displayName": "MusW",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position2": [
+            {
+              "current": {
+                "type": "SUBJECT",
+                "status": "REGULAR",
+                "shortName": "PH",
+                "longName": "Physik",
+                "displayName": "PH",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position3": [
+            {
+              "current": {
+                "type": "ROOM",
+                "status": "REGULAR",
+                "shortName": "12-14",
+                "longName": "Physik 3",
+                "displayName": "12-14",
+                "displayNameLabel": "NAME"
+              },
+              "removed": null
+            }
+          ],
+          "position4": null,
+          "position5": null,
+          "position6": null,
+          "position7": null,
+          "texts": [
+            {
+              "type": "SUBSTITUTION_TEXT",
+              "text": "Bücherausgabe"
+            }
+          ],
+          "lessonText": "",
+          "lessonInfo": null,
+          "substitutionText": "Bücherausgabe",
+          "userName": null,
+          "moved": null,
+          "durationTotal": null,
+          "link": null
+        }
+      ],
+      "backEntries": []
+    }
+  ],
+  "errors": []
+}
+```
+
+## Response — schuldorf (200, dates outside the active school-year range)
+
+```json
+{
+  "format": 1,
+  "days": [
+    {
+      "date": "2026-08-31",
+      "resourceType": "STUDENT",
+      "resource": {
+        "id": 4379,
+        "shortName": "musterschueler",
+        "longName": "Mustermann",
+        "displayName": ""
+      },
+      "status": "NOT_ALLOWED",
+      "dayEntries": [],
+      "gridEntries": [],
+      "backEntries": []
+    },
+    {
+      "date": "2026-09-01",
+      "resourceType": "STUDENT",
+      "resource": {
+        "id": 4379,
+        "shortName": "musterschueler",
+        "longName": "Mustermann",
+        "displayName": ""
+      },
+      "status": "NOT_ALLOWED",
+      "dayEntries": [],
+      "gridEntries": [],
+      "backEntries": []
+    },
+    {
+      "date": "2026-09-02",
+      "resourceType": "STUDENT",
+      "resource": {
+        "id": 4379,
+        "shortName": "musterschueler",
+        "longName": "Mustermann",
+        "displayName": ""
+      },
+      "status": "NOT_ALLOWED",
+      "dayEntries": [],
+      "gridEntries": [],
+      "backEntries": []
+    },
+    {
+      "date": "2026-09-03",
+      "resourceType": "STUDENT",
+      "resource": {
+        "id": 4379,
+        "shortName": "musterschueler",
+        "longName": "Mustermann",
+        "displayName": ""
+      },
+      "status": "NOT_ALLOWED",
+      "dayEntries": [],
+      "gridEntries": [],
+      "backEntries": []
+    },
+    {
+      "date": "2026-09-04",
+      "resourceType": "STUDENT",
+      "resource": {
+        "id": 4379,
+        "shortName": "musterschueler",
+        "longName": "Mustermann",
+        "displayName": ""
+      },
+      "status": "NOT_ALLOWED",
+      "dayEntries": [],
+      "gridEntries": [],
+      "backEntries": []
+    }
+  ],
+  "errors": []
+}
+```

@@ -1,0 +1,663 @@
+# getUserData2017 — cjd-koewi
+
+```
+POST https://cjd-koewi.webuntis.com/WebUntis/jsonrpc_intern.do?school=cjd-koewi&m=getUserData2017&a=false&s=cjd-koewi.webuntis.com&v=a6.7.0
+```
+
+JSON-RPC 2.0, method `getUserData2017`. Returns master data (absence reasons, departments, duties, klassen,
+rooms, subjects, teachers, school years, time grid) plus the per-user `userData`/`settings` blocks. See
+`06_bs_gfv_user_data`, `06_schuldorf_get_user_data`, and `06_wolfsburg_user_data` for the equivalent response
+from the other three schools.
+
+## Request
+
+```json
+{
+  "id": "untis-mobile-android-6.7.0",
+  "jsonrpc": "2.0",
+  "method": "getUserData2017",
+  "params": [
+    {
+      "elementId": 0,
+      "auth": {
+        "clientTime": 1786788454232,
+        "otp": 730465,
+        "user": "Q1"
+      }
+    }
+  ]
+}
+```
+
+## Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "untis-mobile-android-6.7.0",
+  "result": {
+    "masterData": {
+      "timeStamp": 1786788455112,
+      "absenceReasons": [
+        {
+          "id": 192,
+          "name": "Sport inaktiv",
+          "longName": "Sportunterricht durch Eltern für konkrete Sportstunde entschuldigt. Anwesenheitspflicht!",
+          "active": true,
+          "automaticNotificationEnabled": false
+        },
+        {
+          "id": 167,
+          "name": "Kind krank",
+          "longName": "Krankheit durch Eltern entschuldigt",
+          "active": true,
+          "automaticNotificationEnabled": false
+        },
+        {
+          "id": 168,
+          "name": "sch. Veranst..",
+          "longName": "schulische Alternativ-Veranstaltung ",
+          "active": true,
+          "automaticNotificationEnabled": false
+        },
+        {
+          "id": 169,
+          "name": "beurl KL/SL",
+          "longName": "beurlaubt durch KL/SL",
+          "active": true,
+          "automaticNotificationEnabled": false
+        },
+        {
+          "id": 170,
+          "name": "V (e)",
+          "longName": "Verspätung entschuldigt",
+          "active": true,
+          "automaticNotificationEnabled": false
+        }
+      ],
+      "departments": [
+        {
+          "id": 1,
+          "name": "GYM",
+          "longName": "Gymnasium"
+        },
+        {
+          "id": 2,
+          "name": "RS",
+          "longName": "Realschule"
+        },
+        {
+          "id": 6,
+          "name": "RS GYM",
+          "longName": "RS GYM"
+        },
+        {
+          "id": 3,
+          "name": "Untis",
+          "longName": "Untis"
+        }
+      ],
+      "duties": [
+        {
+          "id": 32,
+          "name": "Flur K 2. Stock",
+          "longName": "Flurkehrdienst Kreativhaus 2. Stock",
+          "type": "CUSTOM"
+        },
+        {
+          "id": 1,
+          "name": "Ordner",
+          "longName": "Klassenordner",
+          "type": "STEWARD"
+        },
+        {
+          "id": 2,
+          "name": "KS",
+          "longName": "Klassensprecher",
+          "type": "PREFECT"
+        },
+        {
+          "id": 34,
+          "name": "Flur C",
+          "longName": "Flurkehrdienst C",
+          "type": "CUSTOM"
+        },
+        {
+          "id": 3,
+          "name": "KS Stv.",
+          "longName": "Klassensprecher Stv.",
+          "type": "PREFECT_SUBST"
+        }
+      ],
+      "eventReasons": [
+        {
+          "id": 2,
+          "name": "HA",
+          "longName": "HA nicht gemacht",
+          "elementType": "STUDENT",
+          "groupId": 1,
+          "active": true
+        },
+        {
+          "id": 3,
+          "name": "Mf",
+          "longName": "Material fehlt",
+          "elementType": "STUDENT",
+          "groupId": 1,
+          "active": true
+        },
+        {
+          "id": 6,
+          "name": "HA uv",
+          "longName": "HA unvollständig",
+          "elementType": "STUDENT",
+          "groupId": 1,
+          "active": true
+        },
+        {
+          "id": 8,
+          "name": "ganze Klasse",
+          "longName": "Eintrag für ganze Klasse",
+          "elementType": "CLASS",
+          "groupId": -1,
+          "active": true
+        }
+      ],
+      "eventReasonGroups": [
+        {
+          "id": 1,
+          "name": "HA",
+          "longName": "vergessene Hausaufgaben/Materialien",
+          "active": true
+        },
+        {
+          "id": 4,
+          "name": "Verhalten",
+          "longName": "Verhalten",
+          "active": true
+        },
+        {
+          "id": 6,
+          "name": "Sonstiges",
+          "longName": "Sonstiges",
+          "active": true
+        }
+      ],
+      "excuseStatuses": [
+        {
+          "id": 1,
+          "name": "entschuldigt",
+          "longName": "entschuldigt",
+          "excused": true,
+          "active": true
+        },
+        {
+          "id": 2,
+          "name": "nicht entschuldigt",
+          "longName": "nicht entschuldigt",
+          "excused": false,
+          "active": true
+        },
+        {
+          "id": 3,
+          "name": "nicht akzeptiert",
+          "longName": "nicht akzeptiert",
+          "excused": false,
+          "active": true
+        }
+      ],
+      "holidays": null,
+      "klassen": [
+        {
+          "id": 1685,
+          "name": "10A",
+          "longName": "Neßhöfer,Wördemann",
+          "departmentId": 2,
+          "startDate": "2026-08-31",
+          "endDate": "2027-07-18",
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayable": false
+        },
+        {
+          "id": 1688,
+          "name": "10B",
+          "longName": "Noonan,Niedecken",
+          "departmentId": 2,
+          "startDate": "2026-08-31",
+          "endDate": "2027-07-18",
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayable": false
+        },
+        {
+          "id": 1691,
+          "name": "10C",
+          "longName": "Kostorz,Simonov,Delicali",
+          "departmentId": 1,
+          "startDate": "2026-08-31",
+          "endDate": "2027-07-18",
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayable": false
+        },
+        {
+          "id": 1694,
+          "name": "10D",
+          "longName": "Hoffmann,Karres",
+          "departmentId": 1,
+          "startDate": "2026-08-31",
+          "endDate": "2027-07-18",
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayable": false
+        },
+        {
+          "id": 1697,
+          "name": "10E",
+          "longName": "Peisker, Heldmann",
+          "departmentId": 1,
+          "startDate": "2026-08-31",
+          "endDate": "2027-07-18",
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayable": false
+        }
+      ],
+      "rooms": [
+        {
+          "id": 1349,
+          "name": "A-06 ",
+          "longName": "Konferenzraum Lehrerzimmer",
+          "departmentId": 0,
+          "foreColor": null,
+          "backColor": null,
+          "active": false,
+          "displayAllowed": false
+        },
+        {
+          "id": 36,
+          "name": "A-07",
+          "longName": "Lehrerarbeitsraum",
+          "departmentId": 0,
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 1389,
+          "name": "A-12",
+          "longName": "Glaskasten - ARBEITSRAUM SEK I",
+          "departmentId": 0,
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 66,
+          "name": "A-17a",
+          "longName": "Koordinationsbüro RS",
+          "departmentId": 0,
+          "foreColor": null,
+          "backColor": null,
+          "active": false,
+          "displayAllowed": false
+        },
+        {
+          "id": 71,
+          "name": "A-17b",
+          "longName": "Stellv. Schulleitung Gym",
+          "departmentId": 0,
+          "foreColor": null,
+          "backColor": null,
+          "active": false,
+          "displayAllowed": false
+        }
+      ],
+      "subjects": [
+        {
+          "id": 1530,
+          "name": "?",
+          "longName": "?",
+          "departmentIds": [],
+          "foreColor": "#000000",
+          "backColor": "#d66b29",
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 1,
+          "name": "0WPF",
+          "longName": "Wahlpflichbereich Französisch RS6 nur 2.HJ",
+          "departmentIds": [],
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 6,
+          "name": "0WPP",
+          "longName": "Wahlpflichbereich Politik RS6 nur 2.HJ",
+          "departmentIds": [],
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 11,
+          "name": "1WPF",
+          "longName": "Wahlpflicht 1 Französisch RS7",
+          "departmentIds": [],
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 16,
+          "name": "1WPG",
+          "longName": "Wahlpflicht geografisches und biologisches Forschen RS7",
+          "departmentIds": [],
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayAllowed": false
+        }
+      ],
+      "teachers": [
+        {
+          "id": 823,
+          "name": "BAL",
+          "firstName": "Anna",
+          "lastName": "Musterlehrer1",
+          "departmentIds": [
+            1
+          ],
+          "foreColor": null,
+          "backColor": null,
+          "entryDate": null,
+          "exitDate": null,
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 826,
+          "name": "BAR",
+          "firstName": "Julia",
+          "lastName": "Musterlehrer2",
+          "departmentIds": [
+            1
+          ],
+          "foreColor": null,
+          "backColor": null,
+          "entryDate": null,
+          "exitDate": "2025-07-31",
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 1,
+          "name": "BEG",
+          "firstName": "",
+          "lastName": "Musterlehrer3",
+          "departmentIds": [],
+          "foreColor": null,
+          "backColor": null,
+          "entryDate": null,
+          "exitDate": null,
+          "active": false,
+          "displayAllowed": false
+        },
+        {
+          "id": 6,
+          "name": "BIE",
+          "firstName": "Ben",
+          "lastName": "Musterlehrer4",
+          "departmentIds": [],
+          "foreColor": null,
+          "backColor": null,
+          "entryDate": null,
+          "exitDate": null,
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 725,
+          "name": "BEH",
+          "firstName": "Lena",
+          "lastName": "Musterlehrer5",
+          "departmentIds": [
+            1
+          ],
+          "foreColor": null,
+          "backColor": null,
+          "entryDate": null,
+          "exitDate": "2023-07-31",
+          "active": false,
+          "displayAllowed": false
+        }
+      ],
+      "teachingMethods": [],
+      "schoolyears": [
+        {
+          "id": 1,
+          "name": "2020/2021",
+          "startDate": "2020-08-10",
+          "endDate": "2021-07-04"
+        },
+        {
+          "id": 5,
+          "name": "2021/22",
+          "startDate": "2021-08-16",
+          "endDate": "2022-06-26"
+        },
+        {
+          "id": 7,
+          "name": "2022/2023",
+          "startDate": "2022-08-08",
+          "endDate": "2023-06-25"
+        },
+        {
+          "id": 10,
+          "name": "2023/2024",
+          "startDate": "2023-08-07",
+          "endDate": "2024-07-07"
+        },
+        {
+          "id": 16,
+          "name": "2024/2025",
+          "startDate": "2024-08-19",
+          "endDate": "2025-07-13"
+        }
+      ],
+      "timeGrid": {
+        "days": [
+          {
+            "day": "MON",
+            "units": [
+              {
+                "label": "1",
+                "startTime": "T07:55",
+                "endTime": "T08:55"
+              },
+              {
+                "label": "2",
+                "startTime": "T09:10",
+                "endTime": "T10:10"
+              },
+              {
+                "label": "3",
+                "startTime": "T10:20",
+                "endTime": "T11:20"
+              },
+              {
+                "label": "4",
+                "startTime": "T11:45",
+                "endTime": "T12:45"
+              },
+              {
+                "label": "5",
+                "startTime": "T12:55",
+                "endTime": "T13:55"
+              }
+            ]
+          },
+          {
+            "day": "TUE",
+            "units": [
+              {
+                "label": "1",
+                "startTime": "T07:55",
+                "endTime": "T08:55"
+              },
+              {
+                "label": "2",
+                "startTime": "T09:10",
+                "endTime": "T10:10"
+              },
+              {
+                "label": "3",
+                "startTime": "T10:20",
+                "endTime": "T11:20"
+              },
+              {
+                "label": "4",
+                "startTime": "T11:45",
+                "endTime": "T12:45"
+              },
+              {
+                "label": "5",
+                "startTime": "T12:55",
+                "endTime": "T13:55"
+              }
+            ]
+          },
+          {
+            "day": "WED",
+            "units": [
+              {
+                "label": "1",
+                "startTime": "T07:55",
+                "endTime": "T08:55"
+              },
+              {
+                "label": "2",
+                "startTime": "T09:10",
+                "endTime": "T10:10"
+              },
+              {
+                "label": "3",
+                "startTime": "T10:20",
+                "endTime": "T11:20"
+              },
+              {
+                "label": "4",
+                "startTime": "T11:45",
+                "endTime": "T12:45"
+              },
+              {
+                "label": "5",
+                "startTime": "T12:55",
+                "endTime": "T13:55"
+              }
+            ]
+          },
+          {
+            "day": "THU",
+            "units": [
+              {
+                "label": "1",
+                "startTime": "T07:55",
+                "endTime": "T08:55"
+              },
+              {
+                "label": "2",
+                "startTime": "T09:10",
+                "endTime": "T10:10"
+              },
+              {
+                "label": "3",
+                "startTime": "T10:20",
+                "endTime": "T11:20"
+              },
+              {
+                "label": "4",
+                "startTime": "T11:45",
+                "endTime": "T12:45"
+              },
+              {
+                "label": "5",
+                "startTime": "T12:55",
+                "endTime": "T13:55"
+              }
+            ]
+          },
+          {
+            "day": "FRI",
+            "units": [
+              {
+                "label": "1",
+                "startTime": "T07:55",
+                "endTime": "T08:55"
+              },
+              {
+                "label": "2",
+                "startTime": "T09:10",
+                "endTime": "T10:10"
+              },
+              {
+                "label": "3",
+                "startTime": "T10:20",
+                "endTime": "T11:20"
+              },
+              {
+                "label": "4",
+                "startTime": "T11:45",
+                "endTime": "T12:45"
+              },
+              {
+                "label": "5",
+                "startTime": "T12:55",
+                "endTime": "T13:55"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "userData": {
+      "elemType": "CLASS",
+      "elemId": 1664,
+      "displayName": "",
+      "schoolName": "Jugenddorf-Christophorusschule",
+      "departmentId": 1,
+      "children": [],
+      "klassenIds": [],
+      "rights": []
+    },
+    "settings": {
+      "showAbsenceReason": true,
+      "showAbsenceText": true,
+      "absenceCheckRequired": true,
+      "defaultAbsenceReasonId": 0,
+      "defaultLatenessReasonId": 0,
+      "defaultAbsenceEndTime": "END_OF_DAY",
+      "customAbsenceEndTime": null,
+      "showCalendarDetails": false,
+      "defaultAbsenceExcuseStatusId": 0
+    }
+  }
+}
+```
+
+Note `userData.elemType` is `CLASS`, not `STUDENT` — the `Q1` account is a shared cohort login (a whole
+year-group shares one set of credentials at this school), not an individual student's account.

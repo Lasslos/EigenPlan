@@ -1,0 +1,275 @@
+# getUserData2017 — schuldorf
+
+```
+POST https://schuldorf.webuntis.com/WebUntis/jsonrpc_intern.do?school=schuldorf&m=getUserData2017&a=false&s=schuldorf.webuntis.com&v=a6.7.0
+```
+
+Request body follows the same shape as `06_cjd_getUserData`, with `auth.user` set to the logged-in student's
+username. Response below.
+
+## Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "untis-mobile-android-6.7.0",
+  "result": {
+    "masterData": {
+      "timeStamp": 1786795637301,
+      "absenceReasons": [
+        {
+          "id": 64,
+          "name": "UF",
+          "longName": "Unentschuldigtes Fehlen",
+          "active": true,
+          "automaticNotificationEnabled": false
+        },
+        {
+          "id": 66,
+          "name": "EAZ",
+          "longName": "Entschuldigt/ Abwesenheit zählt",
+          "active": true,
+          "automaticNotificationEnabled": false
+        }
+      ],
+      "departments": [
+        {
+          "id": 9,
+          "name": "Column17",
+          "longName": "Column17"
+        },
+        {
+          "id": 12,
+          "name": "Column19",
+          "longName": "Column19"
+        }
+      ],
+      "duties": [
+        {
+          "id": 1,
+          "name": "Ordner",
+          "longName": "Klassenordner",
+          "type": "STEWARD"
+        },
+        {
+          "id": 2,
+          "name": "KS",
+          "longName": "Klassensprecher",
+          "type": "PREFECT"
+        }
+      ],
+      "eventReasons": [],
+      "eventReasonGroups": [],
+      "excuseStatuses": [
+        {
+          "id": 1,
+          "name": "entsch.",
+          "longName": "entschuldigt",
+          "excused": true,
+          "active": true
+        },
+        {
+          "id": 2,
+          "name": "nicht entsch.",
+          "longName": "nicht entschuldigt",
+          "excused": false,
+          "active": true
+        }
+      ],
+      "holidays": [
+        {
+          "id": 1,
+          "name": "Ferien1",
+          "longName": "Herbstferien",
+          "startDate": "2019-09-30",
+          "endDate": "2019-10-11"
+        },
+        {
+          "id": 2,
+          "name": "Ferien2",
+          "longName": "Weihnachtsferien",
+          "startDate": "2019-12-23",
+          "endDate": "2020-01-10"
+        }
+      ],
+      "klassen": [
+        {
+          "id": 4188,
+          "name": "01aG",
+          "longName": "01aG",
+          "departmentId": 3,
+          "startDate": "2026-08-10",
+          "endDate": "2027-06-27",
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayable": false
+        },
+        {
+          "id": 4191,
+          "name": "01aSISS",
+          "longName": "01aSISS",
+          "departmentId": 1,
+          "startDate": "2026-08-10",
+          "endDate": "2027-06-27",
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayable": false
+        }
+      ],
+      "rooms": [
+        {
+          "id": 437,
+          "name": "_",
+          "longName": "Distanzproblematik",
+          "departmentId": 0,
+          "foreColor": "#000000",
+          "backColor": "#ff80ff",
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 169,
+          "name": "01-Aula",
+          "longName": "Aula",
+          "departmentId": 0,
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayAllowed": false
+        }
+      ],
+      "subjects": [
+        {
+          "id": 1112,
+          "name": "?",
+          "longName": "?",
+          "departmentIds": [],
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 1,
+          "name": "147",
+          "longName": "147",
+          "departmentIds": [],
+          "foreColor": null,
+          "backColor": null,
+          "active": true,
+          "displayAllowed": false
+        }
+      ],
+      "teachers": [
+        {
+          "id": 1,
+          "name": "AbbJ",
+          "firstName": "Nina",
+          "lastName": "Musterlehrer6",
+          "departmentIds": [
+            5
+          ],
+          "foreColor": null,
+          "backColor": null,
+          "entryDate": null,
+          "exitDate": null,
+          "active": true,
+          "displayAllowed": false
+        },
+        {
+          "id": 2,
+          "name": "AdeS",
+          "firstName": "Tom",
+          "lastName": "Musterlehrer7",
+          "departmentIds": [
+            4,
+            5
+          ],
+          "foreColor": null,
+          "backColor": null,
+          "entryDate": null,
+          "exitDate": null,
+          "active": true,
+          "displayAllowed": false
+        }
+      ],
+      "teachingMethods": [],
+      "schoolyears": [
+        {
+          "id": 1,
+          "name": "2019/2020",
+          "startDate": "2019-08-12",
+          "endDate": "2020-07-03"
+        },
+        {
+          "id": 2,
+          "name": "2020/2021",
+          "startDate": "2020-08-17",
+          "endDate": "2021-07-18"
+        }
+      ],
+      "timeGrid": {
+        "days": [
+          {
+            "day": "MON",
+            "units": [
+              {
+                "label": "",
+                "startTime": "T07:30",
+                "endTime": "T08:00"
+              },
+              {
+                "label": "",
+                "startTime": "T08:00",
+                "endTime": "T08:45"
+              }
+            ]
+          },
+          {
+            "day": "TUE",
+            "units": [
+              {
+                "label": "",
+                "startTime": "T07:30",
+                "endTime": "T08:00"
+              },
+              {
+                "label": "",
+                "startTime": "T08:00",
+                "endTime": "T08:45"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "userData": {
+      "elemType": "STUDENT",
+      "elemId": 4379,
+      "displayName": "Mustermann Max",
+      "schoolName": "Gesamtschule im Schuldorf",
+      "departmentId": 5,
+      "children": [],
+      "klassenIds": [],
+      "rights": [
+        "CLASSREGISTER",
+        "R_MY_ABSENCES"
+      ]
+    },
+    "settings": {
+      "showAbsenceReason": true,
+      "showAbsenceText": true,
+      "absenceCheckRequired": true,
+      "defaultAbsenceReasonId": 59,
+      "defaultLatenessReasonId": 58,
+      "defaultAbsenceEndTime": "END_OF_DAY",
+      "customAbsenceEndTime": null,
+      "showCalendarDetails": false,
+      "defaultAbsenceExcuseStatusId": 0
+    }
+  }
+}
+```
+
