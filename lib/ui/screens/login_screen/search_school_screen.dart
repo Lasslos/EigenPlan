@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc_error.dart';
-import 'package:your_schedule/core/untis/models/login_meta/login_meta.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
 import 'package:your_schedule/core/untis/requests/request_login_meta.dart';
 import 'package:your_schedule/core/untis/requests/request_school_list.dart';
@@ -158,16 +157,16 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
   }
 
   Future<void> pickedSchool(School school) async {
-    // Anonymous schools skip the credential form entirely; everything else (including
-    // SSO-only schools, which login-meta doesn't reliably distinguish from normal
-    // password schools) goes through the regular login form, which infers password
-    // vs. login-key mode and falls back automatically — see activateSessionInferringMode.
-    var loginMeta = const LoginMeta(anonymousLoginEnabled: false, ssoLoginEnabled: true);
+    // Anonymous schools skip the credential form entirely; everything else goes
+    // through the regular login form, which tries password then falls back to
+    // treating the entered value as a login key automatically — see
+    // activateSessionInferringMode (not gated on login-meta: whether a given user
+    // has a key is independent of whether the school broadly has SSO configured).
+    var anonymousLoginEnabled = false;
     try {
-      loginMeta = await ref.read(requestLoginMetaProvider(school).future);
+      var loginMeta = await ref.read(requestLoginMetaProvider(school).future);
+      anonymousLoginEnabled = loginMeta.anonymousLoginEnabled;
     } catch (e, s) {
-      // Fail safe towards still allowing the SSO-key fallback (ssoLoginEnabled: true
-      // above) rather than silently disabling it just because this call hiccupped.
       logRequestError('Error while requesting login-meta', e, s);
     }
 
@@ -177,9 +176,9 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => loginMeta.anonymousLoginEnabled
+        builder: (context) => anonymousLoginEnabled
             ? AnonymousLoginScreen(school: school)
-            : LoginScreen(school: school, loginMeta: loginMeta),
+            : LoginScreen(school: school),
       ),
     );
   }

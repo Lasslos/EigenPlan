@@ -112,23 +112,22 @@ Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, 
   return activeSession;
 }
 
-/// Activates a session for [username]/[password], inferring [LoginMode] from
-/// [loginMeta] and automatically retrying with the other credential-based mode if
-/// the first guess fails with a credential error, instead of asking the user to
+/// Activates a session for [username]/[password], trying [LoginMode.password] first
+/// and automatically retrying the exact same entered value as [LoginMode.ssoKey] if
+/// it's specifically rejected as bad credentials — instead of asking the user to
 /// pick up front.
 ///
-/// `login-meta` can't reliably distinguish "SSO offered alongside password" (e.g.
-/// `cjd-koewi`, where password still works) from "SSO-only, password rejected
-/// server-side" (e.g. `schuldorf`) — both report `ssoLoginEnabled: true`. So when SSO
-/// is offered at all, this tries [LoginMode.password] first (the more common case)
-/// and only retries treating the same value as a login key
-/// ([LoginMode.ssoKey]) if password is specifically rejected
-/// (`authenticationFailed`/`userLocked`) — other failures (wrong 2FA token, no
-/// connection, ...) propagate immediately rather than triggering a pointless retry.
+/// This is *not* gated on `login-meta`'s `ssoLoginEnabled`. A login key is a manual
+/// workaround for a specific user (e.g. handed a key/QR code directly), independent
+/// of whether the school broadly has SSO configured — a school with SSO disabled
+/// can still have a user logging in with a key, so login-meta can't be used to rule
+/// the fallback out. Only failures that specifically mean "these credentials are
+/// wrong" (`authenticationFailed`/`userLocked`) trigger the retry; a wrong 2FA
+/// token, no connection, etc. propagate immediately rather than triggering a
+/// pointless retry.
 Future<ActiveUntisSession> activateSessionInferringMode(
   WidgetRef ref,
   School school,
-  LoginMeta loginMeta,
   String username,
   String password, {
   String token = '',
@@ -140,17 +139,13 @@ Future<ActiveUntisSession> activateSessionInferringMode(
     password: password,
   );
 
-  if (!loginMeta.ssoLoginEnabled) {
-    return activateSession(ref, passwordSession, token: token);
-  }
-
   try {
     return await activateSession(ref, passwordSession, token: token);
   } on RPCError catch (e) {
     if (e.code != RPCError.authenticationFailed && e.code != RPCError.userLocked) {
       rethrow;
     }
-    getLogger().i('Password login failed for an SSO-eligible school, retrying as a login key');
+    getLogger().i('Password login failed, retrying the same value as a login key');
     var ssoKeySession = UntisSession.inactive(
       school: school,
       loginMode: LoginMode.ssoKey,

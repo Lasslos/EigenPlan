@@ -5,7 +5,6 @@ import 'package:http/http.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc_error.dart';
-import 'package:your_schedule/core/untis/models/login_meta/login_meta.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
 import 'package:your_schedule/core/untis/untis_session.dart';
 import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
@@ -14,9 +13,8 @@ import 'package:your_schedule/util/logger.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final School school;
-  final LoginMeta loginMeta;
 
-  const LoginScreen({required this.school, required this.loginMeta, super.key});
+  const LoginScreen({required this.school, super.key});
 
   @override
   ConsumerState createState() => LoginScreenState();
@@ -259,7 +257,6 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
       var session = await activateSessionInferringMode(
         ref,
         widget.school,
-        widget.loginMeta,
         _usernameFieldController.text,
         _passwordFieldController.text,
         token: _tokenFieldController.text,

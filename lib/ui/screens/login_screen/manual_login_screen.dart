@@ -6,9 +6,7 @@ import 'package:http/http.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc_error.dart';
-import 'package:your_schedule/core/untis/models/login_meta/login_meta.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
-import 'package:your_schedule/core/untis/requests/request_login_meta.dart';
 import 'package:your_schedule/core/untis/requests/request_school_list.dart';
 import 'package:your_schedule/core/untis/untis_session.dart';
 import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
@@ -340,23 +338,10 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
       'https://${_urlFieldController.text.trim()}/WebUntis/?school=${_schoolFieldController.text.trim()}',
     ).also((_) => getLogger().w('Did not find matching school')));
 
-    LoginMeta loginMeta;
-    try {
-      loginMeta = await ref.read(requestLoginMetaProvider(school).future);
-    } catch (e, s) {
-      logRequestError('Error while requesting login-meta', e, s);
-      setState(() {
-        message = 'Fehler: ${e.toString()}';
-        isLoading = false;
-      });
-      return;
-    }
-
     try {
       var session = await activateSessionInferringMode(
         ref,
         school,
-        loginMeta,
         _usernameFieldController.text,
         _passwordFieldController.text,
         token: _tokenFieldController.text,
