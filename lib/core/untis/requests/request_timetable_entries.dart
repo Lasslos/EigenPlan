@@ -90,6 +90,13 @@ class RequestTimetableEntries extends _$RequestTimetableEntries {
         return {
           for (var day in entries.days) Date(day.date): day,
         };
+      case 404:
+        // Not an exceptional failure — this is the documented "no timetable data for
+        // this resource/date range" response (e.g. a school year that hasn't started
+        // yet), not a real error. See docs/api/spec/openapi.yaml's `timetable/entries`
+        // 404 response and NOTES.md.
+        getLogger().i('No timetable entries for $week ($uri)');
+        return {};
       default:
         getLogger().e('HTTP Error: ${response.statusCode} ${response.reasonPhrase}');
         throw HttpException(
