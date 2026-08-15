@@ -137,15 +137,35 @@ perspective, replaced by two REST calls:
   resource-specific.
 - `GET /timetable/entries` — the actual data, one `TimetableDay` per date, each with `gridEntries[]` that are
   *already laid out* for rendering: `layoutGroup`/`layoutStartPosition`/`layoutWidth` describe how to place
-  overlapping periods side-by-side, and `position1..position7` are independently-populated slots (teacher,
-  subject, room, in that order, for a `STUDENT` resource — unconfirmed for other resource types) each carrying
+  overlapping periods side-by-side, and `position1..position7` are independently-populated slots each carrying
   a `current`/`removed` pair so substitutions can show "was X, now Y" in one cell.
 
 This is a meaningfully bigger model than the old `TimetablePeriod`. I would not try to map the new shape onto
 the existing `TimetablePeriod`/`TimetablePeriodElement` freezed classes — model it fresh (`GridEntry`,
 `GridEntryPositionItem` etc., as scaffolded in `openapi.yaml`) and let the UI layer consume the pre-computed
-layout instead of re-deriving overlap logic itself, which is presumably what `layoutGroup`/`layoutWidth` exist
-to let you stop doing.
+layout instead of re-deriving overlap logic itself, which is what `layoutGroup`/`layoutWidth` exist to let you
+stop doing.
+
+**Resolved during the Phase 3a design spike** (live curl capture against a real teacher account with a
+genuine overlap — see `../captures/home/timetable_entries_overlap_example.md`, superseding the "unconfirmed
+for other resource types"/"always `0`/`1000`" caveats above and in `openapi.yaml`'s earlier draft):
+`layoutStartPosition`/`layoutWidth` are real and worth rendering directly — no client-side collision/packing
+algorithm needed, `period_layout.dart`'s manual layout math should be retired outright rather than adapted.
+The server proportionally shares width among whatever's genuinely concurrent at each moment (full width alone,
+split evenly when things coincide), while a day-long entry can hold a fixed-width column for its whole span.
+Position-slot ordering is resource-type-dependent: `STUDENT`/`CLASS` resources get `position1=TEACHER`
+(array-valued when co-taught), `position2=SUBJECT`, `position3=ROOM`; `TEACHER` resources get
+`position1=CLASS`, `position2=SUBJECT`/`INFO`, `position3=ROOM`, `position4=TEACHER` (populated only for a
+second co-teacher). `position5`-`position7` still unobserved for any resource type.
+
+**Also surfaced by that same capture, unrelated to the layout question**: `getTimetable2017` is not reliable
+on the current server generation — a live check against a real account (real periods confirmed to exist via
+`timetable/entries` for the identical date range) returned **zero periods** from `getTimetable2017` with no
+error at all, and in an earlier app-level test the same call NPE'd server-side
+(`Cannot invoke "...ElementType.getWuType()" because "request.type" is null`) for the same account. Neither
+failure mode is something the client can work around (the REST endpoint has genuinely different, correct
+data). This raises the priority of the REST timetable migration from "nice architecture" to "the legacy
+endpoint may already be silently broken for some schools" — don't treat Phase 3 as deferrable.
 
 ## 5. Things I'd genuinely reconsider in the existing codebase
 
