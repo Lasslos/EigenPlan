@@ -43,5 +43,18 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Required for url_launcher (opening links, e.g. externally-hosted message
+             attachments) to work on Android 11+, see:
+             https://pub.dev/packages/url_launcher#android -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <!-- Required for open_filex (opening a downloaded attachment with whatever
+             app the OS has for its file type) to work on Android 11+. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:mimeType="*/*"/>
+        </intent>
     </queries>
 </manifest>
