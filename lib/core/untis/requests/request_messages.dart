@@ -40,8 +40,7 @@ class RequestMessages extends _$RequestMessages {
       {'school': session.school.loginName},
     );
 
-    AuthToken? authToken =
-        session.loginMode == LoginMode.anonymous ? null : await ref.read(authTokenProvider(session).future);
+    AuthToken authToken = await ref.read(authTokenProvider(session).future);
 
     http.Response response;
     try {
