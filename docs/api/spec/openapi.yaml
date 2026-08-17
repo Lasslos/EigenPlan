@@ -2014,7 +2014,7 @@ components:
       properties:
         id: { type: integer }
         subject: { type: string }
-        contentPreview: { type: string, description: Truncated/plain-text preview of `content`. }
+        contentPreview: { type: string, nullable: true, description: 'Truncated/plain-text preview of `content`. Observed null for attachment-only messages with no text body.' }
         sender: { $ref: '#/components/schemas/MessageSender' }
         sentDateTime: { type: string, format: date-time }
         allowMessageDeletion: { type: boolean }
@@ -2034,7 +2034,7 @@ components:
       properties:
         id: { type: integer }
         subject: { type: string }
-        content: { type: string, description: "Full message body. May contain literal `\\n` newlines." }
+        content: { type: string, nullable: true, description: "Full message body. May contain literal `\\n` newlines. Observed null for attachment-only messages with no text body." }
         sender: { $ref: '#/components/schemas/MessageSender' }
         sentDateTime: { type: string, format: date-time }
         allowMessageDeletion: { type: boolean }
@@ -2211,8 +2211,8 @@ components:
     # ---- timetable (new REST) ---------------------------------------------------------------------------------
     ResourceType:
       type: string
-      description: "Observed: `CLASS`, `STUDENT`. Presumably also `TEACHER`/`ROOM`/`SUBJECT` — **UNKNOWN**, unconfirmed against this server generation."
-      enum: [CLASS, STUDENT]
+      description: "Observed: `CLASS`, `STUDENT`, `TEACHER`. Presumably also `ROOM`/`SUBJECT` — **UNKNOWN**, unconfirmed against this server generation."
+      enum: [CLASS, STUDENT, TEACHER]
     PeriodType:
       type: string
       description: "Full list as requested by the app's `timetable/entries` call (not all individually confirmed to ever be *returned* — only `NORMAL_TEACHING_PERIOD` and `EVENT` were observed in response data)."
@@ -2284,11 +2284,20 @@ components:
         One rendered timetable cell. `ids` groups together the underlying period-instance id(s) this cell
         represents (>1 when consecutive identical periods are merged into one visual block, e.g. a double
         lesson) — these are the ids to pass into `getPeriodData2017`'s `ttIds` or `calendar-entry/detail`'s
-        `elementId`. `position1`..`position7` are independently-nullable *slots* the UI renders in order
-        (observed usage: 1=teacher, 2=subject, 3=room; 4-7 unobserved but presumably resources/classes/text
-        depending on `resourceType`) — do not assume a fixed teacher/subject/room mapping without re-checking
-        against a `resourceType: TEACHER` or `resourceType: CLASS` response, only `STUDENT` was captured here
-        (**UNKNOWN**).
+        `elementId`. `position1`..`position7` are independently-nullable *slots* the UI renders in order, and
+        the mapping is resource-type-dependent — confirmed via a live capture against a real `TEACHER`
+        resource: `position1=CLASS`, `position2=SUBJECT` (or `INFO` for non-teaching entries like `EVENT`),
+        `position3=ROOM` — the inverse of the `STUDENT`/`CLASS` resource ordering (`position1=TEACHER`,
+        `position2=SUBJECT`, `position3=ROOM`) documented elsewhere in this file. `position4`-`position7`
+        still unobserved for any resource type — **UNKNOWN**.
+
+        `layoutStartPosition`/`layoutWidth` are genuinely meaningful (not always `0`/`1000` as the original
+        captures suggested) — confirmed via a live capture with real overlapping periods: the server computes
+        a proportional layout per `layoutGroup` (all entries sharing a `layoutGroup` value co-occur in time),
+        e.g. one long-spanning entry pinned to a fixed-width column for its whole duration while shorter
+        entries dynamically share the remaining width — full width when only one thing is happening at that
+        moment, split evenly when two genuinely coincide. See `../captures/home/timetable_entries_overlap_example.md`
+        for the raw values. A client-side collision/layout algorithm is unnecessary — render this directly.
       properties:
         ids: { type: array, items: { type: integer } }
         duration:
@@ -2297,13 +2306,13 @@ components:
             start: { type: string, format: date-time, description: "No seconds, e.g. `2026-08-17T08:00`." }
             end: { type: string, format: date-time }
         type: { $ref: '#/components/schemas/PeriodType' }
-        status: { type: string, description: "Observed: `REGULAR`, `CHANGED`." }
-        statusDetail: { type: string, nullable: true, description: "**UNKNOWN** — always `null` in captures." }
+        status: { type: string, description: "Observed: `REGULAR`, `CHANGED`, `CANCELLED`." }
+        statusDetail: { type: string, nullable: true, description: "Observed: `SUBSTITUTED` (paired with `status: CHANGED`), or `null`." }
         name: { type: string, nullable: true }
-        layoutStartPosition: { type: integer, description: "Observed always `0`. Presumably a 0-1000 horizontal offset within the day column for overlapping periods, paired with `layoutWidth`." }
-        layoutWidth: { type: integer, description: "Observed always `1000` (i.e. full width) — presumably out of 1000, shrinks when periods overlap." }
-        layoutGroup: { type: integer, description: "Sequential index of this period within the day (1-based)." }
-        color: { type: string, nullable: true, description: "6-digit hex, no `#`." }
+        layoutStartPosition: { type: integer, description: "0-1000 horizontal offset within the day column, paired with `layoutWidth`. Confirmed non-trivial values (not always `0`) when genuinely overlapping — see `../captures/home/timetable_entries_overlap_example.md`." }
+        layoutWidth: { type: integer, description: "Out of 1000. `1000` when nothing overlaps; shared proportionally among everything active in the same `layoutGroup` at a given moment otherwise (e.g. two simultaneous periods each get `500`, or `333` when a third, day-long entry also occupies a fixed column for the same `layoutGroup`) — see `../captures/home/timetable_entries_overlap_example.md`." }
+        layoutGroup: { type: integer, description: "Groups entries that co-occur in time within the day; entries sharing a `layoutGroup` value share `layoutStartPosition`/`layoutWidth` accounting. Sequential per day (1-based), not a stable id." }
+        color: { type: string, nullable: true, description: "6-digit hex, no `#`. Tracks period status/type more than subject identity — the same subject was observed in different colors depending on status in one capture. Treat as a suggested default only, not authoritative — see NOTES.md's color rule." }
         notesAll: { type: string }
         icons:
           type: array
@@ -2321,7 +2330,7 @@ components:
           items:
             type: object
             properties:
-              type: { type: string, description: "Observed: `SUBSTITUTION_TEXT`." }
+              type: { type: string, description: "Observed: `SUBSTITUTION_TEXT`, `LESSON_INFO`." }
               text: { type: string }
         lessonText: { type: string }
         lessonInfo: { type: string, nullable: true }
@@ -2337,16 +2346,16 @@ components:
         removed:
           nullable: true
           allOf: [{ $ref: '#/components/schemas/GridEntryPositionElement' }]
-          description: "**UNKNOWN** — always `null` in captures; presumably populated for a substitution to show the struck-through original alongside `current`."
+          description: "Confirmed populated for a real substitution — `current` (status `ADDED`) is the new room/teacher, `removed` (status `REMOVED`) is the original, e.g. a room change or a covering teacher. See `../captures/home/timetable_entries_overlap_example.md`."
     GridEntryPositionElement:
       type: object
       properties:
-        type: { type: string, description: "Observed: `TEACHER`, `SUBJECT`, `ROOM`." }
-        status: { type: string, description: "Observed: `REGULAR`." }
+        type: { type: string, description: "Observed: `TEACHER`, `SUBJECT`, `ROOM`, `CLASS`, `INFO`. `CLASS` and `INFO` confirmed via a `resourceType: TEACHER` capture — see `GridEntry`'s description for the resource-type-dependent position ordering." }
+        status: { type: string, description: "Observed: `REGULAR`, `ADDED`, `REMOVED` (the latter two on a substituted `current`/`removed` pair)." }
         shortName: { type: string }
         longName: { type: string }
         displayName: { type: string }
-        displayNameLabel: { type: string, description: "Observed always `NAME` — **UNKNOWN** other values / purpose." }
+        displayNameLabel: { type: string, nullable: true, description: "Observed `NAME`, or `null` for `type: INFO`. Other values **UNKNOWN**." }
 
     TimetableGrid:
       type: object

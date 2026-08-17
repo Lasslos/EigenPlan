@@ -22,7 +22,6 @@ abstract class IncomingMessage with _$IncomingMessage {
   const factory IncomingMessage({
     required int id,
     required String subject,
-    required String contentPreview,
     required MessageSender sender,
     required DateTime sentDateTime,
     required bool allowMessageDeletion,
@@ -30,10 +29,13 @@ abstract class IncomingMessage with _$IncomingMessage {
     required bool isMessageRead,
     required bool isReply,
     required bool isReplyAllowed,
+    // Null for attachment-only messages with no text body (confirmed live: a
+    // `schuldorf` message with `hasAttachments: true` and no other content).
+    String? contentPreview,
   }) = _IncomingMessage;
 
   factory IncomingMessage.fromJson(Map<String, dynamic> json) =>
-      _$IncomingMessageFromJson(json);
+    _$IncomingMessageFromJson(json);
 }
 
 @freezed

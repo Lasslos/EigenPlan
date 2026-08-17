@@ -13,8 +13,9 @@ import 'package:your_schedule/util/logger.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final School school;
+  final bool anonymousLoginEnabled;
 
-  const LoginScreen({required this.school, super.key});
+  const LoginScreen({required this.school, this.anonymousLoginEnabled = false, super.key});
 
   @override
   ConsumerState createState() => LoginScreenState();
@@ -47,30 +48,41 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 25),
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: buildLoginCard(context),
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    label: const Text('Zurück'),
-                    icon: const Icon(Icons.arrow_back),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: buildLoginCard(context),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.bottomLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 16.0),
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              label: const Text('Zurück'),
+                              icon: const Icon(Icons.arrow_back),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -191,45 +203,61 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
                     ?.copyWith(color: Colors.red),
               ),
               const SizedBox(height: 8),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: isLoading
-                    ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    height: 48,
-                    child: Center(
-                      child: LinearProgressIndicator(),
+              Align(
+                alignment: Alignment.centerRight,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: isLoading
+                      ? const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: SizedBox(
+                      height: 48,
+                      child: Center(
+                        child: LinearProgressIndicator(),
+                      ),
                     ),
+                  )
+                      : Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (widget.anonymousLoginEnabled)
+                        TextButton(
+                          onPressed: _continueAnonymously,
+                          child: const Text('Ohne Passwort fortfahren'),
+                        ),
+                      ElevatedButton(
+                        focusNode: focusNodes[3],
+                        style: ButtonStyle(
+                          backgroundColor: WidgetStateProperty.all(
+                            Theme
+                                .of(context)
+                                .colorScheme
+                                .primary,
+                          ),
+                          foregroundColor: WidgetStateProperty.all(
+                            Theme
+                                .of(context)
+                                .colorScheme
+                                .onPrimary,
+                          ),
+                          textStyle: WidgetStateProperty.all(
+                            Theme
+                                .of(context)
+                                .textTheme
+                                .labelLarge,
+                          ),
+                        ),
+                        onPressed: () {
+                          FocusScope.of(context).unfocus();
+                          _login(connectivity);
+                        },
+                        child: const Text('Log In'),
+                      ),
+                    ],
                   ),
-                )
-                    : ElevatedButton(
-                  focusNode: focusNodes[3],
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.all(
-                      Theme
-                          .of(context)
-                          .colorScheme
-                          .primary,
-                    ),
-                    foregroundColor: WidgetStateProperty.all(
-                      Theme
-                          .of(context)
-                          .colorScheme
-                          .onPrimary,
-                    ),
-                    textStyle: WidgetStateProperty.all(
-                      Theme
-                          .of(context)
-                          .textTheme
-                          .labelLarge,
-                    ),
-                  ),
-                  onPressed: () {
-                    FocusScope.of(context).unfocus();
-                    _login(connectivity);
-                  },
-                  child: const Text('Log In'),
                 ),
               ),
             ],
@@ -253,14 +281,14 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    UntisSession session = UntisSession.inactive(
-      school: widget.school,
-      username: _usernameFieldController.text,
-      password: _passwordFieldController.text,
-    );
-
     try {
-      session = await activateSession(ref, session, token: _tokenFieldController.text);
+      var session = await activateSessionInferringMode(
+        ref,
+        widget.school,
+        _usernameFieldController.text,
+        _passwordFieldController.text,
+        token: _tokenFieldController.text,
+      );
       ref.read(untisSessionsProvider.notifier).addSession(session);
 
       Navigator.pushAndRemoveUntil(
@@ -285,7 +313,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
       setState(() {
         message = switch (e.code) {
-          RPCError.authenticationFailed => 'Falsches Passwort',
+          RPCError.authenticationFailed => 'Falsche Anmeldedaten',
           RPCError.invalidTwoFactor => 'Falscher 2-Faktor-Token',
           int() => e.message,
         };
@@ -297,6 +325,61 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
       });
     } catch (e, s) {
       getLogger().e('Unknown Error while logging in', error: e, stackTrace: s);
+      setState(() {
+        message = e.toString();
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void _continueAnonymously() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    var connectivityResult = await ref.read(connectivityProvider.future);
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      setState(() {
+        message = 'Keine Internetverbindung';
+        isLoading = false;
+      });
+      return;
+    }
+
+    UntisSession session = UntisSession.inactive(
+      school: widget.school,
+      loginMode: LoginMode.anonymous,
+    );
+
+    try {
+      var activeSession = await activateSession(ref, session);
+      ref.read(untisSessionsProvider.notifier).addSession(activeSession);
+
+      Navigator.pushAndRemoveUntil(
+        //ignore: use_build_context_synchronously
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
+      );
+      Navigator.push(
+        //ignore: use_build_context_synchronously
+        context,
+        MaterialPageRoute(builder: (_) => const FilterScreen()),
+      );
+    } on RPCError catch (e) {
+      setState(() {
+        message = e.message;
+      });
+    } on ClientException catch (e, s) {
+      getLogger().e('ClientException while logging in anonymously', error: e, stackTrace: s);
+      setState(() {
+        message = e.toString();
+      });
+    } catch (e, s) {
+      getLogger().e('Unknown error while logging in anonymously', error: e, stackTrace: s);
       setState(() {
         message = e.toString();
       });

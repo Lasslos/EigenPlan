@@ -5,6 +5,7 @@ import 'package:http/http.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc_error.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
+import 'package:your_schedule/core/untis/requests/request_login_meta.dart';
 import 'package:your_schedule/core/untis/requests/request_school_list.dart';
 import 'package:your_schedule/ui/screens/login_screen/login_screen.dart';
 import 'package:your_schedule/util/logger.dart';
@@ -154,10 +155,29 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
     });
   }
 
-  void pickedSchool(School school) {
+  Future<void> pickedSchool(School school) async {
+    // The credential form always handles login; it tries password then falls back
+    // to treating the entered value as a login key automatically — see
+    // activateSessionInferringMode (not gated on login-meta: whether a given user
+    // has a key is independent of whether the school broadly has SSO configured).
+    // Schools with anonymous login enabled additionally get a "continue without
+    // a password" button on that same screen.
+    var anonymousLoginEnabled = false;
+    try {
+      var loginMeta = await ref.read(requestLoginMetaProvider(school).future);
+      anonymousLoginEnabled = loginMeta.anonymousLoginEnabled;
+    } catch (e, s) {
+      logRequestError('Error while requesting login-meta', e, s);
+    }
+
+    if (!mounted) {
+      return;
+    }
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen(school: school)),
+      MaterialPageRoute(
+        builder: (context) => LoginScreen(school: school, anonymousLoginEnabled: anonymousLoginEnabled),
+      ),
     );
   }
 }

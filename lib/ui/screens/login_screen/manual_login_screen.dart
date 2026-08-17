@@ -338,14 +338,14 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
       'https://${_urlFieldController.text.trim()}/WebUntis/?school=${_schoolFieldController.text.trim()}',
     ).also((_) => getLogger().w('Did not find matching school')));
 
-    UntisSession session = UntisSession.inactive(
-      school: school,
-      username: _usernameFieldController.text,
-      password: _passwordFieldController.text,
-    );
-
     try {
-      session = await activateSession(ref, session, token: _tokenFieldController.text);
+      var session = await activateSessionInferringMode(
+        ref,
+        school,
+        _usernameFieldController.text,
+        _passwordFieldController.text,
+        token: _tokenFieldController.text,
+      );
       ref.read(untisSessionsProvider.notifier).addSession(session);
 
       Navigator.pushAndRemoveUntil(
@@ -370,7 +370,7 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
 
       setState(() {
         message = switch (e.code) {
-          RPCError.authenticationFailed => 'Falsches Passwort',
+          RPCError.authenticationFailed => 'Falsche Anmeldedaten',
           RPCError.invalidTwoFactor => 'Falscher 2-Faktor-Token',
           RPCError.invalidSchoolName => 'Ungültiger Schulname',
           int() => e.message,

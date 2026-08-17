@@ -101,3 +101,7 @@ Response Body:
   ],
   "readConfirmationMessages": []
 }
+
+Note: `contentPreview` has also been observed as `null` (not just absent) on a real
+account, for a message with `hasAttachments: true` and no text body — model must
+treat it as nullable, not required.

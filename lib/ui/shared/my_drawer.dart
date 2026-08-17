@@ -22,7 +22,7 @@ class MyDrawer extends ConsumerWidget {
       child: Column(
         children: [
           UserAccountsDrawerHeader(
-            accountName: Text(session.username),
+            accountName: Text(session.displayLabel),
             accountEmail: Text(userData.schoolName),
             currentAccountPicture: getProfileAvatar(context, ref),
             decoration: BoxDecoration(

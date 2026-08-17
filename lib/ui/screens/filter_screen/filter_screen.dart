@@ -61,18 +61,16 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
 
     var filters = ref.watch(filtersProvider);
     var timeTableWeeks = [for (var i = -2; i < 3; i++) ref.watch(timeTableProvider(session, Week.relative(i)))];
-    var timeTablePeriods = _getRelevantTimeTablePeriods(timeTableWeeks);
+    var gridEntries = _getRelevantGridEntries(timeTableWeeks);
 
     var subjects = session.userData.subjects;
-    var teachers = session.userData.teachers;
-    var rooms = session.userData.rooms;
 
     final gridChildren = periods.map<Widget>(
       (e) {
-        TimeTablePeriod examplePeriod = timeTablePeriods.firstWhere((element) => e == element.subject?.id);
+        GridEntry exampleEntry = gridEntries.firstWhere((entry) => e == entry.resolveSubject(subjects)?.key);
         Subject? subject = subjects[e];
-        Teacher? teacher = teachers[examplePeriod.teacher?.id];
-        Room? room = rooms[examplePeriod.room?.id];
+        var teacherText = exampleEntry.positionOfType('TEACHER')?.current.shortName;
+        var roomText = exampleEntry.positionOfType('ROOM')?.current.shortName;
 
         return Padding(
           key: ValueKey(e),
@@ -89,8 +87,8 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
             child: Center(
               child: FilterGridTile(
                 subject: subject?.name ?? 'Kein Fach',
-                teacher: teacher?.shortName ?? 'Kein Lehrer',
-                room: room?.name ?? 'Kein Raum',
+                teacher: teacherText ?? 'Kein Lehrer',
+                room: roomText ?? 'Kein Raum',
               ),
             ),
           ),
@@ -145,7 +143,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                             _initPeriods();
                           } else {
                             searchQuery = value;
-                            _filterPeriods(periods, filters, subjects, teachers, rooms, timeTablePeriods);
+                            _filterPeriods(periods, filters, subjects, gridEntries);
                           }
                         });
                       },
@@ -201,26 +199,19 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
 
     var filters = ref.read(filtersProvider);
     var subjects = userData.subjects;
-    var teachers = userData.teachers;
-    var rooms = userData.rooms;
     var timeTableWeeks = [for (var i = -2; i < 3; i++) ref.read(timeTableProvider(session, Week.relative(i)))];
-    var timeTablePeriods = _getRelevantTimeTablePeriods(timeTableWeeks);
+    var gridEntries = _getRelevantGridEntries(timeTableWeeks);
 
     _sortPeriods(periods, filters, subjects);
-    _filterPeriods(periods, filters, subjects, teachers, rooms, timeTablePeriods);
+    _filterPeriods(periods, filters, subjects, gridEntries);
   }
 
-  List<TimeTablePeriod> _getRelevantTimeTablePeriods(List<TimeTableWeek> timeTableWeeks) {
-    return timeTableWeeks.fold<List<TimeTablePeriod>>(
-      [],
-      (list, element) => list
-        ..addAll(
-          element.values.fold<List<TimeTablePeriod>>(
-            [],
-            (list, element) => list..addAll(element),
-          ),
-        ),
-    );
+  List<GridEntry> _getRelevantGridEntries(List<TimeTableWeek> timeTableWeeks) {
+    return [
+      for (var week in timeTableWeeks)
+        for (var day in week.values)
+          ...day.gridEntries,
+    ];
   }
 
   void _sortPeriods(List<int> periods, Set<int> filters, Map<int, Subject> subjects) {
@@ -239,51 +230,36 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     List<int> periods,
     Set<int> filters,
     Map<int, Subject> subjects,
-    Map<int, Teacher> teachers,
-    Map<int, Room> rooms,
-    List<TimeTablePeriod> timeTable,
+    List<GridEntry> gridEntries,
   ) {
-    // Filter every non-valid class
+    // Filter every subject with no example entry in the visible weeks (nothing to
+    // preview, and possibly a stale/no-longer-taught subject).
     periods
       ..retainWhere((e) {
-        var examplePeriod = timeTable.firstWhereOrNull((element) => element.subject?.id == e);
-        if (examplePeriod == null) {
-        return false;
-      }
-      var subjectId = examplePeriod.subject?.id;
-      var teacherId = examplePeriod.teacher?.id;
-      var roomId = examplePeriod.room?.id;
-        if (subjectId != null && !subjects.containsKey(subjectId) ||
-            teacherId != null && !teachers.containsKey(teacherId) ||
-            roomId != null && !rooms.containsKey(roomId)) {
-          return false;
-      }
-
-        return true;
+        return gridEntries.any((entry) => entry.resolveSubject(subjects)?.key == e);
       })
 
       // Filter by search query
       ..retainWhere((e) {
-        var examplePeriod = timeTable.firstWhereOrNull((element) => element.subject?.id == e);
-      var subject = subjects[e];
-      var teacher = teachers[examplePeriod?.teacher?.id];
-      var room = rooms[examplePeriod?.room?.id];
+        var exampleEntry = gridEntries.firstWhereOrNull((entry) => entry.resolveSubject(subjects)?.key == e);
+        var subject = subjects[e];
+        var teacherName = exampleEntry?.positionOfType('TEACHER')?.current;
+        var roomName = exampleEntry?.positionOfType('ROOM')?.current;
 
-      var accept = false;
-      if (subject != null) {
-        accept = subject.name.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-        accept = subject.longName.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-      }
-      if (teacher != null) {
-        accept = teacher.firstName.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-        accept = teacher.lastName.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-        accept = teacher.shortName.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-      }
-      if (room != null) {
-        accept = room.name.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-        accept = room.longName.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-      }
-      return accept;
+        var accept = false;
+        if (subject != null) {
+          accept = subject.name.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
+          accept = subject.longName.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
+        }
+        if (teacherName != null) {
+          accept = (teacherName.shortName ?? '').toLowerCase().contains(searchQuery.toLowerCase()) || accept;
+          accept = (teacherName.longName ?? '').toLowerCase().contains(searchQuery.toLowerCase()) || accept;
+        }
+        if (roomName != null) {
+          accept = (roomName.shortName ?? '').toLowerCase().contains(searchQuery.toLowerCase()) || accept;
+          accept = (roomName.longName ?? '').toLowerCase().contains(searchQuery.toLowerCase()) || accept;
+        }
+        return accept;
       });
   }
 }

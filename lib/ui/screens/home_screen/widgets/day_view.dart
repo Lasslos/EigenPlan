@@ -4,9 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:your_schedule/core/provider/filters.dart';
 import 'package:your_schedule/core/provider/timetable_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
+import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/settings/view_mode_provider.dart';
 import 'package:your_schedule/ui/screens/home_screen/home_screen_date_provider.dart';
-import 'package:your_schedule/ui/screens/home_screen/widgets/period_layout.dart';
+import 'package:your_schedule/ui/screens/home_screen/widgets/grid_entry_layout.dart';
 import 'package:your_schedule/ui/screens/home_screen/widgets/time_indicator.dart';
 import 'package:your_schedule/utils.dart';
 
@@ -72,9 +73,10 @@ class _Page extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     Date currentDate = _indexToDate(index);
 
-    var session = ref.watch(selectedUntisSessionProvider);
-    var timeTable = ref.watch(timeTableProvider(session, Week.fromDate(currentDate)))[currentDate]!;
+    var session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
+    var timetableDay = ref.watch(timeTableProvider(session, Week.fromDate(currentDate)))[currentDate];
     var filters = ref.watch(filtersProvider);
+    var subjects = session.userData.subjects;
 
     return Center(
       child: Column(
@@ -105,13 +107,14 @@ class _Page extends ConsumerWidget {
           Expanded(
             child: Stack(
               children: [
-                PeriodLayout(
+                GridEntryLayout(
                   fontSize: 12,
-                  periods: timeTable
+                  entries: (timetableDay?.gridEntries ?? [])
                       .where(
-                        (element) =>
-                            element.subject == null ||
-                            filters.contains(element.subject!.id),
+                        (entry) {
+                          var subjectId = entry.resolveSubject(subjects)?.key;
+                          return subjectId == null || filters.contains(subjectId);
+                        },
                       )
                       .toList(),
                 ),

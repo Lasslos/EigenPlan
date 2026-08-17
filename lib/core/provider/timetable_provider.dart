@@ -11,7 +11,7 @@ class TimeTable extends _$TimeTable {
   TimeTableWeek build(UntisSession session, Week week) {
     assert(session is ActiveUntisSession, 'Session must be active');
     if (ref.watch(canMakeRequestProvider)) {
-      var timeTable = ref.watch(requestTimeTableProvider(session, week));
+      var timeTable = ref.watch(requestTimetableEntriesProvider(session, week));
       if (timeTable.hasValue) {
         return timeTable.requireValue;
       }

@@ -13,32 +13,33 @@ class CachedTimeTable extends _$CachedTimeTable {
   TimeTableWeek build(UntisSession activeSession, Week week) {
     assert(activeSession is ActiveUntisSession, 'Session must be active!');
     ActiveUntisSession session = activeSession as ActiveUntisSession;
-    if (!sharedPreferences.containsKey('${session.userData.id}.timetable.$week')) {
-      return {
-        for (var i = 0; i < 7; i++) week.startDate.addDays(i): const [],
-      };
+    final key = '${session.userData.id}.timetable.$week';
+    final json = sharedPreferences.getString(key);
+    if (json == null) {
+      return {};
     }
 
-    final json = jsonDecode(
-      sharedPreferences.getString('${session.userData.id}.timetable.$week')!,
-    );
-
-    return {
-      for (var entry in json.entries)
-        Date.fromMillisecondsSinceEpoch(int.parse(entry.key)): entry.value.map<TimeTablePeriod>((e) => TimeTablePeriod.fromJson(e)).toList(),
-    };
+    try {
+      return {
+        for (var dayJson in jsonDecode(json) as List<dynamic>)
+          Date(DateTime.parse((dayJson as Map<String, dynamic>)['date'] as String)): TimetableDay.fromJson(dayJson),
+      };
+    } catch (e, s) {
+      // Old-shaped or otherwise corrupt cached timetable — drop it rather than crash;
+      // the live request will repopulate it. See storage_migration.dart's schema-version
+      // gate for the general version of this same defensiveness.
+      getLogger().e('Dropping unparseable cached timetable', error: e, stackTrace: s);
+      return {};
+    }
   }
 
   Future<void> setCachedTimeTable(TimeTableWeek timeTable) async {
-    await ref.read(cachedTimeTableTimestampProvider(week).notifier).setCachedTimeTableTimestamp(DateTime.now());
-
-    Map<String, dynamic> json = {
-      for (var entry in timeTable.entries) entry.key.millisecondsSinceEpoch.toString(): entry.value.map((e) => e.toJson()).toList(),
-    };
+    ActiveUntisSession session = activeSession as ActiveUntisSession;
+    await ref.read(cachedTimeTableTimestampProvider(session, week).notifier).setCachedTimeTableTimestamp(DateTime.now());
 
     await sharedPreferences.setString(
-      '${(activeSession as ActiveUntisSession).userData.id}.timetable.$week',
-      jsonEncode(json),
+      '${session.userData.id}.timetable.$week',
+      jsonEncode(timeTable.values.map((day) => day.toJson()).toList()),
     );
 
     state = timeTable;
@@ -48,14 +49,17 @@ class CachedTimeTable extends _$CachedTimeTable {
 @Riverpod(keepAlive: true)
 class CachedTimeTableTimestamp extends _$CachedTimeTableTimestamp {
   @override
-  DateTime build(Week week) {
-    return sharedPreferences.containsKey('timetable.$week.timestamp')
-        ? DateTime.parse(sharedPreferences.getString('timetable.$week.timestamp')!)
-        : DateTime.now();
+  DateTime build(UntisSession activeSession, Week week) {
+    assert(activeSession is ActiveUntisSession, 'Session must be active!');
+    ActiveUntisSession session = activeSession as ActiveUntisSession;
+    final key = '${session.userData.id}.timetable.$week.timestamp';
+    final stored = sharedPreferences.getString(key);
+    return stored != null ? DateTime.parse(stored) : DateTime.now();
   }
 
   Future<void> setCachedTimeTableTimestamp(DateTime timestamp) async {
-    await sharedPreferences.setString('timetable.$week.timestamp', timestamp.toIso8601String());
+    ActiveUntisSession session = activeSession as ActiveUntisSession;
+    await sharedPreferences.setString('${session.userData.id}.timetable.$week.timestamp', timestamp.toIso8601String());
     state = timestamp;
   }
 }

@@ -18,9 +18,9 @@ class TimeTableView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ViewMode viewMode = ref.watch(viewModeSettingProvider);
     Date date = ref.watch(homeScreenDateProvider);
-    DateTime timestamp = ref.watch(cachedTimeTableTimestampProvider(Week.fromDate(date)));
     // Eager initialization of the time table providers
     var session = ref.watch(selectedUntisSessionProvider);
+    DateTime timestamp = ref.watch(cachedTimeTableTimestampProvider(session, Week.fromDate(date)));
     ref
       ..watch(timeTableProvider(session, Week.fromDate(date)))
       ..watch(timeTableProvider(session, Week.fromDate(date.addWeeks(1))))
@@ -29,8 +29,8 @@ class TimeTableView extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         var session = ref.read(selectedUntisSessionProvider);
-        ref.invalidate(requestTimeTableProvider(session, Week.fromDate(date)));
-        await ref.read(requestTimeTableProvider(session, Week.fromDate(date)).future);
+        ref.invalidate(requestTimetableEntriesProvider(session, Week.fromDate(date)));
+        await ref.read(requestTimetableEntriesProvider(session, Week.fromDate(date)).future);
       },
       child: SafeArea(
         child: Column(

@@ -7,10 +7,10 @@ part 'specified_message.g.dart';
 
 @freezed
 abstract class SpecifiedMessage with _$SpecifiedMessage {
+  @JsonSerializable(explicitToJson: true)
   const factory SpecifiedMessage({
     required int id,
     required String subject,
-    required String content,
     required MessageSender sender,
     required DateTime sentDateTime,
     required bool allowMessageDeletion,
@@ -18,11 +18,16 @@ abstract class SpecifiedMessage with _$SpecifiedMessage {
     required bool isReplyAllowed,
     required bool isReportMessage,
     required bool isReplyForbidden,
-    required List<Map<String, dynamic>> attachments,
-    required List<Map<String, dynamic>> storageAttachments,
-    required List<Map<String, dynamic>> replyHistory,
+    @Default([]) List<ExternalAttachment> attachments,
+    @Default([]) List<StorageAttachment> storageAttachments,
+    // Always empty/null in every capture — shape genuinely unknown, so left loosely
+    // typed rather than guessed at. See docs/api/spec/openapi.yaml.
+    @Default([]) List<dynamic> replyHistory,
     Map<String, dynamic>? blobAttachment,
     Map<String, dynamic>? requestConfirmation,
+    // Null for attachment-only messages with no text body (confirmed live: a
+    // `schuldorf` message with attachments and no other content).
+    String? content,
   }) = _SpecifiedMessage;
 
   factory SpecifiedMessage.fromJson(Map<String, dynamic> json) =>

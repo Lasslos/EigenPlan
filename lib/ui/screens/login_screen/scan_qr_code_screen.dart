@@ -164,8 +164,10 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
       'https://$url/WebUntis/?school=$schoolString',
     ).also((_) => getLogger().w('Did not find matching school')));
 
+    // QR codes carry an app-shared-secret/OTP key, not a real password.
     UntisSession session = UntisSession.inactive(
       school: school,
+      loginMode: LoginMode.ssoKey,
       username: user,
       password: key,
     );
