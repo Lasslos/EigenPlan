@@ -55,3 +55,11 @@ credentials.txt
 credentials.csv
 
 devtools_options.yaml
+
+# Local-only live-API test credentials (tier 4b) — never commit real school
+# credentials. See test/live/README.md.
+test/live/credentials.local.json
+
+# One-shot marker for the Stop hook's verification level (full vs. light) for the
+# next turn only — ephemeral local state, not project config. See CLAUDE.md.
+.claude/.verify-level

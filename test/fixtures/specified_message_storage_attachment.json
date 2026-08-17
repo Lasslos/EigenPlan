@@ -1,0 +1,27 @@
+{
+  "id": 4857,
+  "subject": "Schulmusical - Termine nächste Woche!",
+  "content": "Liebe Schulgemeinde,\nhier die Ankündigung des Schulmusicals.",
+  "sender": {
+    "className": null,
+    "displayName": "Admin_2",
+    "imageUrl": null,
+    "userId": 145
+  },
+  "sentDateTime": "2026-06-05T15:52:00",
+  "allowMessageDeletion": false,
+  "attachments": [],
+  "blobAttachment": null,
+  "storageAttachments": [
+    {
+      "id": "68d39a3f-7a7d-4aaa-b597-641d6cf121c1",
+      "name": "Schulmusical-Plakat.pdf"
+    }
+  ],
+  "isReply": false,
+  "isReplyAllowed": false,
+  "isReportMessage": false,
+  "isReplyForbidden": false,
+  "replyHistory": [],
+  "requestConfirmation": null
+}

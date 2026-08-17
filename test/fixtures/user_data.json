@@ -1,0 +1,87 @@
+{
+  "masterData": {
+    "timeStamp": 1786788455112,
+    "klassen": [
+      {
+        "id": 1685,
+        "name": "10A",
+        "longName": "Neßhöfer,Wördemann",
+        "departmentId": 2,
+        "startDate": "2026-08-31",
+        "endDate": "2027-07-18",
+        "foreColor": null,
+        "backColor": null,
+        "active": true,
+        "displayable": false
+      }
+    ],
+    "rooms": [
+      {
+        "id": 1349,
+        "name": "A-06 ",
+        "longName": "Konferenzraum Lehrerzimmer",
+        "departmentId": 0,
+        "foreColor": null,
+        "backColor": null,
+        "active": false,
+        "displayAllowed": false
+      }
+    ],
+    "subjects": [
+      {
+        "id": 1530,
+        "name": "?",
+        "longName": "?",
+        "departmentIds": [],
+        "foreColor": "#000000",
+        "backColor": "#d66b29",
+        "active": true,
+        "displayAllowed": false
+      }
+    ],
+    "teachers": [
+      {
+        "id": 823,
+        "name": "BAL",
+        "firstName": "Anna",
+        "lastName": "Musterlehrer1",
+        "departmentIds": [1],
+        "foreColor": null,
+        "backColor": null,
+        "entryDate": null,
+        "exitDate": null,
+        "active": true,
+        "displayAllowed": false
+      }
+    ],
+    "timeGrid": {
+      "days": [
+        {
+          "day": "MON",
+          "units": [
+            {
+              "label": "1",
+              "startTime": "T07:55",
+              "endTime": "T08:55"
+            },
+            {
+              "label": "2",
+              "startTime": "T09:10",
+              "endTime": "T10:10"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "userData": {
+    "elemType": "CLASS",
+    "elemId": 1664,
+    "displayName": "",
+    "schoolName": "Jugenddorf-Christophorusschule",
+    "departmentId": 1,
+    "children": [],
+    "klassenIds": [],
+    "rights": []
+  }
+}

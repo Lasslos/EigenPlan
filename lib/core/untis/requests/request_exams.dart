@@ -53,7 +53,7 @@ class RequestExams extends _$RequestExams {
       case RPCResponseResult():
         {
           // Get exam set
-          var examSet = (response.result.result['exams'] as List<dynamic>).map((
+          var examSet = (response.result['exams'] as List<dynamic>).map((
               e) => Exam.fromJson(e)).toSet();
           //Create empty map
           var examMap = <Date, List<Exam>>{

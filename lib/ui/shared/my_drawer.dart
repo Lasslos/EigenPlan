@@ -48,18 +48,21 @@ class MyDrawer extends ConsumerWidget {
               );
             },
           ),
-          ListTile(
-            title: const Text('Nachrichten'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MessagesScreen(),
-                ),
-              );
-            },
-          ),
+          // Messages are not available for anonymous sessions — confirmed 403
+          // Forbidden server-side, not something a retry/fix on our end can solve.
+          if (session.loginMode != LoginMode.anonymous)
+            ListTile(
+              title: const Text('Nachrichten'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MessagesScreen(),
+                  ),
+                );
+              },
+            ),
           Expanded(child: Container()),
           ListTile(
             title: const Text('Einstellungen'),

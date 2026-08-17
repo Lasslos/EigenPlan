@@ -25,13 +25,14 @@ Future<MobileData> requestMobileData(Ref ref, UntisSession activeSession) async 
     {'school': session.school.loginName},
   );
 
-  AuthToken authToken = await ref.read(authTokenProvider(session).future);
+  AuthToken? authToken =
+      session.loginMode == LoginMode.anonymous ? null : await ref.read(authTokenProvider(session).future);
 
   http.Response response;
   try {
     response = await http.get(
       uri,
-      headers: {'Authorization': 'Bearer ${authToken.jwt}'},
+      headers: session.restAuthHeaders(authToken),
     );
   } catch (e, s) {
     getLogger().e('Error while requesting mobile data', error: e, stackTrace: s);

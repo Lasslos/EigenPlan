@@ -1,0 +1,3 @@
+tags:
+  live:
+    skip: "Live integration tests require local credentials and hit the real Untis API — run explicitly with: flutter test --tags=live (see test/live/README.md)"

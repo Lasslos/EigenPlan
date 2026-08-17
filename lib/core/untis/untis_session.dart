@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -63,6 +65,24 @@ extension ActiveUntisSessionAuthParams on ActiveUntisSession {
         LoginMode.anonymous => const AuthParams.anonymous(),
         LoginMode.password || LoginMode.ssoKey =>
           AuthParams.credentials(user: username!, appSharedSecret: appSharedSecret!),
+      };
+}
+
+extension ActiveUntisSessionRestAuthHeaders on ActiveUntisSession {
+  /// Auth header(s) for the REST (`/WebUntis/api/**`) endpoints — as opposed to
+  /// JSON-RPC, which uses [authParams]. Anonymous sessions send
+  /// `anonymous-school-base64` (base64 of the school's `loginName`) instead of a
+  /// bearer token: confirmed live (against `bs-gfv`) that REST endpoints reject the
+  /// anonymous account's own JWT with `401 Unauthorized`, even though `getAuthToken`
+  /// itself succeeds. See `docs/api/spec/NOTES.md` §2b. [authToken] is unused for
+  /// anonymous sessions — callers don't need to fetch one at all in that case.
+  Map<String, String> restAuthHeaders(AuthToken? authToken) => switch (loginMode) {
+        LoginMode.anonymous => {
+            'anonymous-school-base64': base64Encode(utf8.encode(school.loginName)),
+          },
+        LoginMode.password || LoginMode.ssoKey => {
+            'Authorization': 'Bearer ${authToken!.jwt}',
+          },
       };
 }
 

@@ -1,0 +1,19 @@
+{
+  "id": 501,
+  "examType": "KLA",
+  "startDateTime": "2026-09-15T08:00:00",
+  "endDateTime": "2026-09-15T09:35:00",
+  "subjectId": 1530,
+  "klasseIds": [1685],
+  "roomIds": [1349],
+  "teacherIds": [823],
+  "invigilators": [
+    {
+      "id": 823,
+      "startTime": "T07:55",
+      "endTime": "T09:35"
+    }
+  ],
+  "name": "Klausur Mathematik",
+  "text": "Taschenrechner erlaubt"
+}

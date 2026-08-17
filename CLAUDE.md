@@ -51,9 +51,40 @@ flutter run
 
 # Build a release APK
 flutter build apk
+
+# Offline tests (fixtures, no network/credentials)
+flutter test
+
+# Live API coverage tests — real credentials, local-only, never run this in CI;
+# see test/live/README.md. Both flags matter: --run-skipped overrides
+# dart_test.yaml's default skip for the 'live' tag.
+flutter test --tags=live --run-skipped
 ```
 
-There is no test suite in this repository at present (no `test/` directory).
+## Verification
+
+This repo has a four-tier verification pipeline (static analysis, codegen, build, tests — see
+`README.md`'s "Verification" section for the full breakdown) enforced two ways: a GitHub Actions
+workflow on every PR (tiers 1–3 + offline tests only — never the live-API tier), and a Claude Code
+`Stop` hook (`.claude/hooks/verify-before-stop.sh`) that runs before you can finish a turn.
+
+The hook runs at one of two speeds:
+
+- **full** (default): codegen → analyze → offline tests → live API tests → debug APK build. The
+  live-API step is safe by default even without credentials configured — see
+  `test/live/README.md` — it just runs a trivial placeholder test in that case.
+- **light**: codegen → analyze only. Use this for small, exploratory, or live-debugging turns where
+  a multi-minute build isn't worth paying for — a single-file fix, iterating on one function, a
+  quick config tweak. For anything that changes behavior more substantially — new
+  models/providers/screens, anything touching the request/parsing layer, multi-file changes — leave
+  it on the default `full` speed so the build and test suite actually run.
+
+To opt into light mode for the *next* Stop only, run this before finishing:
+```shell
+mkdir -p .claude && echo light > .claude/.verify-level
+```
+This is one-shot: the hook deletes the marker after reading it, so the following turn defaults back
+to `full` unless you set it again. When in doubt, do nothing — `full` is the safe default.
 
 ## Architecture
 
