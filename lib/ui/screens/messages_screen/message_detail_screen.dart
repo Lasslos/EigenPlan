@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -44,30 +43,17 @@ class MessageDetailScreen extends ConsumerWidget {
             for (var attachment in message.attachments)
               AttachmentCard(
                 fileName: attachment.name,
-                fetchSize: () => _fetchExternalSize(attachment),
                 onDownload: () => _openExternal(attachment),
               ),
             for (var attachment in message.storageAttachments)
               _StorageAttachmentCard(session: session, attachment: attachment),
             if (message.attachments.isNotEmpty || message.storageAttachments.isNotEmpty)
               const SizedBox(height: 8),
-            Text(message.content),
+            Text(message.content ?? ''),
           ],
         ),
       ),
     );
-  }
-}
-
-Future<int?> _fetchExternalSize(ExternalAttachment attachment) async {
-  try {
-    var response = await http.head(Uri.parse(attachment.downloadUrl));
-    var contentLength = response.headers['content-length'];
-    return contentLength != null ? int.tryParse(contentLength) : null;
-  } catch (_) {
-    // Best-effort only — many externally-hosted links (e.g. SharePoint share links)
-    // don't return a usable Content-Length without following a redirect chain first.
-    return null;
   }
 }
 
@@ -84,8 +70,7 @@ Future<void> _openExternal(ExternalAttachment attachment) async {
 /// fetch the bytes itself, then hand the OS a local file to open with whatever app
 /// it has for that file type. Resolving the signed URL is its own request
 /// (`attachmentstorageurl`), so this widget caches that resolution for its own
-/// lifetime — the size check (a HEAD request) and the actual download both reuse it
-/// instead of resolving twice.
+/// lifetime.
 class _StorageAttachmentCard extends ConsumerStatefulWidget {
   final ActiveUntisSession session;
   final StorageAttachment attachment;
@@ -102,20 +87,6 @@ class _StorageAttachmentCardState extends ConsumerState<_StorageAttachmentCard> 
   Future<AttachmentStorageUrl> _resolve() {
     _resolved ??= ref.read(requestAttachmentStorageUrlProvider(widget.session, widget.attachment.id).future);
     return _resolved!;
-  }
-
-  Future<int?> _fetchSize() async {
-    try {
-      var resolved = await _resolve();
-      var response = await http.head(
-        Uri.parse(resolved.downloadUrl),
-        headers: {for (var header in resolved.additionalHeaders) header.key: header.value},
-      );
-      var contentLength = response.headers['content-length'];
-      return contentLength != null ? int.tryParse(contentLength) : null;
-    } catch (_) {
-      return null;
-    }
   }
 
   Future<void> _downloadAndOpen() async {
@@ -136,7 +107,6 @@ class _StorageAttachmentCardState extends ConsumerState<_StorageAttachmentCard> 
   Widget build(BuildContext context) {
     return AttachmentCard(
       fileName: widget.attachment.name,
-      fetchSize: _fetchSize,
       onDownload: _downloadAndOpen,
     );
   }

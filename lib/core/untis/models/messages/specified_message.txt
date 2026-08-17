@@ -33,3 +33,9 @@ Response Body:
   "replyHistory": [],
   "requestConfirmation": null
 }
+
+Note: `content` has also been observed as `null` (not just absent) on a real account,
+for an attachment-only message with no text body — model must treat it as nullable,
+not required. Example (redacted): `{"id":11735,"subject":"Wintertürchen 16.12.",
+"content":null,"attachments":[{"id":"0","name":"16.12..pdf","downloadUrl":"..."}],
+...}`.

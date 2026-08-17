@@ -2014,7 +2014,7 @@ components:
       properties:
         id: { type: integer }
         subject: { type: string }
-        contentPreview: { type: string, description: Truncated/plain-text preview of `content`. }
+        contentPreview: { type: string, nullable: true, description: 'Truncated/plain-text preview of `content`. Observed null for attachment-only messages with no text body.' }
         sender: { $ref: '#/components/schemas/MessageSender' }
         sentDateTime: { type: string, format: date-time }
         allowMessageDeletion: { type: boolean }
@@ -2034,7 +2034,7 @@ components:
       properties:
         id: { type: integer }
         subject: { type: string }
-        content: { type: string, description: "Full message body. May contain literal `\\n` newlines." }
+        content: { type: string, nullable: true, description: "Full message body. May contain literal `\\n` newlines. Observed null for attachment-only messages with no text body." }
         sender: { $ref: '#/components/schemas/MessageSender' }
         sentDateTime: { type: string, format: date-time }
         allowMessageDeletion: { type: boolean }

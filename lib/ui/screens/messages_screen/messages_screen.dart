@@ -51,6 +51,17 @@ class _MessageTile extends StatelessWidget {
     return '${date.day}.${date.month.toString().padLeft(2, '0')}.${date.year}';
   }
 
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) {
+      return '';
+    }
+    if (parts.length == 1) {
+      return parts.first.substring(0, parts.first.length.clamp(0, 2)).toUpperCase();
+    }
+    return (parts.first[0] + parts.last[0]).toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -72,7 +83,7 @@ class _MessageTile extends StatelessWidget {
               radius: 22,
               backgroundColor: colorScheme.primaryContainer,
               child: Text(
-                msg.sender.displayName,
+                _initials(msg.sender.displayName),
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.w600,
@@ -94,7 +105,7 @@ class _MessageTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    msg.contentPreview,
+                    msg.contentPreview ?? '',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(

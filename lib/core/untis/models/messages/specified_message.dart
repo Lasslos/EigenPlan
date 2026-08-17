@@ -11,7 +11,6 @@ abstract class SpecifiedMessage with _$SpecifiedMessage {
   const factory SpecifiedMessage({
     required int id,
     required String subject,
-    required String content,
     required MessageSender sender,
     required DateTime sentDateTime,
     required bool allowMessageDeletion,
@@ -26,6 +25,9 @@ abstract class SpecifiedMessage with _$SpecifiedMessage {
     @Default([]) List<dynamic> replyHistory,
     Map<String, dynamic>? blobAttachment,
     Map<String, dynamic>? requestConfirmation,
+    // Null for attachment-only messages with no text body (confirmed live: a
+    // `schuldorf` message with attachments and no other content).
+    String? content,
   }) = _SpecifiedMessage;
 
   factory SpecifiedMessage.fromJson(Map<String, dynamic> json) =>
