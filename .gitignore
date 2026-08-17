@@ -53,3 +53,5 @@ app.*.map.json
 
 credentials.txt
 credentials.csv
+
+devtools_options.yaml
