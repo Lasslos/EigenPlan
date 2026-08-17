@@ -1,0 +1,21 @@
+{
+  "result": {
+    "size": 0,
+    "schools": [
+      {
+        "server": "cjd-koewi.webuntis.com",
+        "useMobileServiceUrlAndroid": false,
+        "address": "53639, Königswinter, Cleethorpeser Platz 12",
+        "displayName": "CJD Königswinter Christophorusschule",
+        "loginName": "cjd-koewi",
+        "schoolId": 5237400,
+        "useMobileServiceUrlIos": false,
+        "serverUrl": "https://cjd-koewi.webuntis.com/WebUntis/?school=cjd-koewi",
+        "tenantId": "5237400",
+        "mobileServiceUrl": null
+      }
+    ]
+  },
+  "id": "untis-mobile-android-6.7.0",
+  "jsonrpc": "2.0"
+}

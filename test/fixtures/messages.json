@@ -1,0 +1,39 @@
+{
+  "incomingMessages": [
+    {
+      "id": 4890,
+      "subject": "Gottesdienst-Erinnerung: Jg. 10 Gym/RS, EF, Q1 am 10.06.2026, 2. Std",
+      "contentPreview": "Liebe Schüler:innen, am Mittwoch, den 10.06.2026 findet in der 2. Stunde unser letzter Gottesdienst in diesem Schuljahr statt.",
+      "sender": {
+        "className": null,
+        "displayName": "Admin_1",
+        "imageUrl": null,
+        "userId": 67
+      },
+      "sentDateTime": "2026-06-08T12:25:00",
+      "allowMessageDeletion": false,
+      "hasAttachments": false,
+      "isMessageRead": true,
+      "isReply": false,
+      "isReplyAllowed": false
+    },
+    {
+      "id": 4857,
+      "subject": "Schulmusical - Termine nächste Woche!",
+      "contentPreview": "Liebe Schulgemeinde, hier die Ankündigung des Schulmusicals.",
+      "sender": {
+        "className": null,
+        "displayName": "Admin_2",
+        "imageUrl": null,
+        "userId": 145
+      },
+      "sentDateTime": "2026-06-05T15:52:00",
+      "allowMessageDeletion": false,
+      "hasAttachments": true,
+      "isMessageRead": true,
+      "isReply": false,
+      "isReplyAllowed": false
+    }
+  ],
+  "readConfirmationMessages": []
+}

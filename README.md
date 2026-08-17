@@ -36,6 +36,27 @@ me.
 
 Pull requests and issues are always welcome.
 
+## Verification
+
+Before opening a PR, this project expects:
+
+1. **Static analysis** — `flutter analyze` must pass cleanly.
+2. **Code generation** — `dart run build_runner build --delete-conflicting-outputs` must succeed.
+3. **Build** — `flutter build apk --debug --target-platform android-arm64` must succeed. (Release
+   builds need a local `key.properties` this repo doesn't ship with, so verification always targets
+   debug.)
+4. **Tests**, in two tiers:
+   - `flutter test` — offline unit tests against fixtures derived from `docs/api/captures/`, no
+     network or credentials needed.
+   - `flutter test --tags=live --run-skipped` — exercises the real Untis API with real school
+     credentials to check everything still parses. **Never run in CI.** See
+     [`test/live/README.md`](test/live/README.md) for how to provide credentials.
+
+Tiers 1–3 and the offline test tier run in CI on every PR
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Locally, the Claude Code `Stop` hook
+([`.claude/hooks/verify-before-stop.sh`](.claude/hooks/verify-before-stop.sh)) runs all of the
+above, including the live-API tier, at its default `full` verification level — see `CLAUDE.md`.
+
 ### Code generation
 
 Generate the nessessary code:

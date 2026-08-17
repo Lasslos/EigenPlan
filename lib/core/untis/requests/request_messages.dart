@@ -14,6 +14,10 @@ class RequestMessages extends _$RequestMessages {
   Future<Messages> build(UntisSession activeSession) async {
     assert(activeSession is ActiveUntisSession, 'Session must be active');
     ActiveUntisSession session = activeSession as ActiveUntisSession;
+    assert(
+      session.loginMode != LoginMode.anonymous,
+      'Messages are not available for anonymous sessions (confirmed 403 Forbidden server-side).',
+    );
 
     listenSelf((previous, data) {
       if (previous == data) {
@@ -36,14 +40,15 @@ class RequestMessages extends _$RequestMessages {
       {'school': session.school.loginName},
     );
 
-    AuthToken authToken = await ref.read(authTokenProvider(session).future);
+    AuthToken? authToken =
+        session.loginMode == LoginMode.anonymous ? null : await ref.read(authTokenProvider(session).future);
 
     http.Response response;
     try {
       response = await http.get(
         uri,
         headers: {
-          'Authorization': 'Bearer ${authToken.jwt}',
+          ...session.restAuthHeaders(authToken),
           'Content-Type': 'application/json; charset=UTF-8',
           'Accept-Encoding': 'gzip',
           'Cache-Control': 'public, no-cache',

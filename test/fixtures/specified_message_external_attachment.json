@@ -1,0 +1,33 @@
+{
+  "id": 11743,
+  "subject": "Wintertürchen 17.12.",
+  "content": "Also available in English today.",
+  "sender": {
+    "className": null,
+    "displayName": "Musterlehrer Frank",
+    "imageUrl": null,
+    "userId": 49
+  },
+  "sentDateTime": "2025-12-17T07:11:00",
+  "allowMessageDeletion": true,
+  "attachments": [
+    {
+      "id": "0",
+      "name": "17.12. eng.pdf",
+      "downloadUrl": "https://example-my.sharepoint.invalid/:b:/g/personal/redacted/redacted1"
+    },
+    {
+      "id": "0",
+      "name": "17.12..pdf",
+      "downloadUrl": "https://example-my.sharepoint.invalid/:b:/g/personal/redacted/redacted2"
+    }
+  ],
+  "blobAttachment": null,
+  "storageAttachments": [],
+  "isReply": false,
+  "isReplyAllowed": true,
+  "isReportMessage": false,
+  "isReplyForbidden": false,
+  "replyHistory": [],
+  "requestConfirmation": null
+}
