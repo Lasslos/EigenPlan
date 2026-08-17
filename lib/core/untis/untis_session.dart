@@ -152,7 +152,14 @@ Future<ActiveUntisSession> activateSessionInferringMode(
       username: username,
       password: password,
     );
-    return activateSession(ref, ssoKeySession);
+    try {
+      return await activateSession(ref, ssoKeySession);
+    } on FormatException {
+      // The entered value isn't valid Base32, so it can't be a login key either —
+      // most passwords aren't, this is expected and not a real error. Report it the
+      // same as the original bad-credentials failure rather than leaking a decode error.
+      throw const RPCError(RPCError.authenticationFailed, 'Invalid credentials', null);
+    }
   }
 }
 

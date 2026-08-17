@@ -7,7 +7,6 @@ import 'package:your_schedule/core/rpc_request/rpc_error.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
 import 'package:your_schedule/core/untis/requests/request_login_meta.dart';
 import 'package:your_schedule/core/untis/requests/request_school_list.dart';
-import 'package:your_schedule/ui/screens/login_screen/anonymous_login_screen.dart';
 import 'package:your_schedule/ui/screens/login_screen/login_screen.dart';
 import 'package:your_schedule/util/logger.dart';
 
@@ -157,11 +156,12 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
   }
 
   Future<void> pickedSchool(School school) async {
-    // Anonymous schools skip the credential form entirely; everything else goes
-    // through the regular login form, which tries password then falls back to
-    // treating the entered value as a login key automatically — see
+    // The credential form always handles login; it tries password then falls back
+    // to treating the entered value as a login key automatically — see
     // activateSessionInferringMode (not gated on login-meta: whether a given user
     // has a key is independent of whether the school broadly has SSO configured).
+    // Schools with anonymous login enabled additionally get a "continue without
+    // a password" button on that same screen.
     var anonymousLoginEnabled = false;
     try {
       var loginMeta = await ref.read(requestLoginMetaProvider(school).future);
@@ -176,9 +176,7 @@ class _SearchSchoolScreenState extends ConsumerState<SearchSchoolScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => anonymousLoginEnabled
-            ? AnonymousLoginScreen(school: school)
-            : LoginScreen(school: school),
+        builder: (context) => LoginScreen(school: school, anonymousLoginEnabled: anonymousLoginEnabled),
       ),
     );
   }
