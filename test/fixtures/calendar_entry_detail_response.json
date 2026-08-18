@@ -1,0 +1,104 @@
+{
+  "calendarEntries": [
+    {
+      "id": 2499695,
+      "previousId": null,
+      "nextId": 2499698,
+      "absenceReasonId": null,
+      "booking": null,
+      "color": "2feecb",
+      "endDateTime": "2026-08-18T09:25:00",
+      "exam": null,
+      "homeworks": [
+        {
+          "id": 16372,
+          "text": "Macht einfach irgendetwas",
+          "remark": "Bis Montag",
+          "completed": false,
+          "dateTime": "2026-03-15T00:00:00",
+          "dueDateTime": "2026-03-20T00:00:00",
+          "attachments": []
+        }
+      ],
+      "klasses": [
+        {
+          "displayName": "7d",
+          "hasTimetable": true,
+          "id": 1169,
+          "longName": "7d OBS",
+          "shortName": "7d"
+        }
+      ],
+      "lesson": {
+        "lessonId": 98571,
+        "lessonNumber": 122600
+      },
+      "lessonInfo": null,
+      "mainStudentGroup": {
+        "id": 55207,
+        "name": "Te_7d_ML"
+      },
+      "notesAll": "Bitte Aufgaben mitbringen",
+      "notesAllFiles": [],
+      "notesStaff": null,
+      "notesStaffFiles": [],
+      "originalCalendarEntry": null,
+      "permissions": ["WRITE_NOTES_STAFF", "WRITE_NOTES_ALL"],
+      "resources": [],
+      "rooms": [
+        {
+          "displayName": "1W13",
+          "hasTimetable": true,
+          "id": 25,
+          "longName": "Technikraum",
+          "shortName": "1W13",
+          "status": "REGULAR"
+        }
+      ],
+      "singleEntries": [],
+      "startDateTime": "2026-08-18T07:55:00",
+      "status": "CANCELLED",
+      "students": [],
+      "subType": {
+        "displayInPeriodDetails": false,
+        "displayName": "Unterricht",
+        "id": 1
+      },
+      "subject": {
+        "displayName": "Te",
+        "hasTimetable": false,
+        "id": 18,
+        "longName": "Technik",
+        "shortName": "Te"
+      },
+      "substText": null,
+      "teachers": [
+        {
+          "displayName": "ML",
+          "hasTimetable": true,
+          "id": 134,
+          "longName": "Musterlehrer",
+          "shortName": "ML",
+          "status": "REGULAR",
+          "imageUrl": null
+        }
+      ],
+      "teachingContent": null,
+      "teachingContentFiles": [],
+      "type": "NORMAL_TEACHING_PERIOD",
+      "videoCall": null,
+      "integrationsSection": [
+        {
+          "id": 28,
+          "name": "Messenger",
+          "url": "https://eassistent.at/mobileapp?tenant_id=6763800&school=wolfsburger-oberschule&lesson_id=98571",
+          "iconName": "pa-eassistent-logo",
+          "type": "APP",
+          "appId": "com.eassistent.untis",
+          "hideBrowserControls": true,
+          "reloadDetailsOnResume": false
+        }
+      ]
+    }
+  ]
+}
