@@ -39,3 +39,46 @@ for an attachment-only message with no text body — model must treat it as null
 not required. Example (redacted): `{"id":11735,"subject":"Wintertürchen 16.12.",
 "content":null,"attachments":[{"id":"0","name":"16.12..pdf","downloadUrl":"..."}],
 ...}`.
+
+## `replyHistory` populated (2026-08 live probe, `wolfsburger-oberschule` TEACHER account)
+
+Previously documented as "always empty" — every earlier capture happened to be against
+a message with no reply thread. Confirmed via a real reply thread; redacted example:
+
+```
+{
+  "id": 120871,
+  "subject": "Test",
+  "content": "...",
+  "sender": { "className": null, "displayName": "ReplyingUser", "imageUrl": null, "userId": 17115 },
+  "sentDateTime": "2026-08-18T19:35:00",
+  "allowMessageDeletion": true,
+  "attachments": [],
+  "blobAttachment": null,
+  "storageAttachments": [],
+  "isReply": true,
+  "isReplyAllowed": true,
+  "isReportMessage": false,
+  "isReplyForbidden": false,
+  "replyHistory": [
+    {
+      "id": 120870,
+      "subject": "Test",
+      "content": "...",
+      "sender": { "className": null, "displayName": "OriginalSender", "imageUrl": null, "userId": 1163 },
+      "recipients": [
+        { "className": null, "displayName": "ReplyingUser", "imageUrl": null, "userId": 17115 }
+      ],
+      "sentDateTime": "2026-08-18T19:11:00",
+      "isRevoked": false,
+      "attachments": [],
+      "blobAttachment": null,
+      "storageAttachments": []
+    }
+  ],
+  "requestConfirmation": null
+}
+```
+
+`replyHistory[].recipients[]` is the same shape as `MessageSender` — previously
+documented as "UNKNOWN item shape", now confirmed by this capture.
