@@ -1,6 +1,7 @@
 export 'untis/cached/cached_exams.dart';
 export 'untis/cached/cached_homework.dart';
 export 'untis/cached/cached_messages.dart';
+export 'untis/cached/cached_mobile_data.dart';
 export 'untis/cached/cached_specified_message.dart';
 export 'untis/cached/cached_timetable.dart';
 export 'untis/cached/cached_timetable_menu.dart';

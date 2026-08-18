@@ -9,47 +9,75 @@ import 'package:your_schedule/util/logger.dart';
 part 'request_mobile_data.g.dart';
 
 /// Requests tenant + logged-in-user summary via `GET /api/rest/view/v3/mobile/data`.
-///
-/// No offline caching — nothing in the UI consumes this yet (see
-/// `docs/api/spec/NOTES.md` §5.4/Phase 1), so the full "live vs cached" three-provider
-/// pattern (`CLAUDE.md`) isn't warranted for it at this point; add a cached/live pair
-/// alongside whichever screen ends up needing this offline.
-@riverpod
-Future<MobileData> requestMobileData(Ref ref, UntisSession activeSession) async {
-  assert(activeSession is ActiveUntisSession, 'Session must be active!');
-  ActiveUntisSession session = activeSession as ActiveUntisSession;
+/// Cached via [CachedMobileData]/composed via `AccountInfo` (`lib/core/provider/mobile_data_provider.dart`)
+/// for the drawer avatar and Settings' account section.
+@Riverpod(keepAlive: true)
+class RequestMobileData extends _$RequestMobileData {
+  @override
+  Future<MobileData> build(UntisSession activeSession) async {
+    assert(activeSession is ActiveUntisSession, 'Session must be active!');
+    ActiveUntisSession session = activeSession as ActiveUntisSession;
 
-  final uri = Uri.https(
-    session.school.server,
-    '/WebUntis/api/rest/view/v3/mobile/data',
-    {'school': session.school.loginName},
-  );
+    listenSelf((previous, data) {
+      if (previous == data) {
+        return;
+      }
+      data.when(
+        data: (data) {
+          ref
+              .read(cachedMobileDataProvider(session).notifier)
+              .setCachedMobileData(data);
+        },
+        error: (error, stackTrace) {
+          logRequestError(
+            'Error while requesting mobile data',
+            error,
+            stackTrace,
+          );
+        },
+        loading: () {},
+      );
+    });
 
-  AuthToken? authToken =
-      session.loginMode == LoginMode.anonymous ? null : await ref.read(authTokenProvider(session).future);
-
-  http.Response response;
-  try {
-    response = await http.get(
-      uri,
-      headers: session.restAuthHeaders(authToken),
+    final uri = Uri.https(
+      session.school.server,
+      '/WebUntis/api/rest/view/v3/mobile/data',
+      {'school': session.school.loginName},
     );
-  } catch (e, s) {
-    getLogger().e('Error while requesting mobile data', error: e, stackTrace: s);
-    rethrow;
-  }
 
-  switch (response.statusCode) {
-    case 200:
-      return MobileData.fromJson(
-        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    AuthToken? authToken = session.loginMode == LoginMode.anonymous
+        ? null
+        : await ref.read(authTokenProvider(session).future);
+
+    http.Response response;
+    try {
+      response = await http.get(
+        uri,
+        headers: session.restAuthHeaders(authToken),
       );
-    default:
-      getLogger().e('HTTP Error: ${response.statusCode} ${response.reasonPhrase}');
-      throw HttpException(
-        response.statusCode,
-        response.reasonPhrase.toString(),
-        uri: uri,
+    } catch (e, s) {
+      getLogger().e(
+        'Error while requesting mobile data',
+        error: e,
+        stackTrace: s,
       );
+      rethrow;
+    }
+
+    switch (response.statusCode) {
+      case 200:
+        return MobileData.fromJson(
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+        );
+      default:
+        getLogger().e(
+          'HTTP Error: ${response.statusCode} ${response.reasonPhrase}',
+        );
+        throw HttpException(
+          response.statusCode,
+          response.reasonPhrase.toString(),
+          uri: uri,
+        );
+    }
   }
 }
