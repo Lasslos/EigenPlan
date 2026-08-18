@@ -68,20 +68,25 @@ This repo has a four-tier verification pipeline (static analysis, codegen, build
 workflow on every PR (tiers 1–3 + offline tests only — never the live-API tier), and a Claude Code
 `Stop` hook (`.claude/hooks/verify-before-stop.sh`) that runs before you can finish a turn.
 
-The hook runs at one of two speeds:
+The hook runs at one of three speeds:
 
-- **full** (default): codegen → analyze → offline tests → live API tests → debug APK build. The
-  live-API step is safe by default even without credentials configured — see
-  `test/live/README.md` — it just runs a trivial placeholder test in that case.
+- **full** (default): codegen → analyze → offline tests → debug APK build (~30s total). Covers
+  everything CI covers.
 - **light**: codegen → analyze only. Use this for small, exploratory, or live-debugging turns where
-  a multi-minute build isn't worth paying for — a single-file fix, iterating on one function, a
-  quick config tweak. For anything that changes behavior more substantially — new
-  models/providers/screens, anything touching the request/parsing layer, multi-file changes — leave
-  it on the default `full` speed so the build and test suite actually run.
+  even a build isn't worth paying for — a single-file fix, iterating on one function, a quick config
+  tweak. For anything that changes behavior more substantially — new models/providers/screens,
+  anything touching the request/parsing layer, multi-file changes — leave it on the default `full`
+  speed so the build and test suite actually run.
+- **live**: everything in `full`, plus the tier-4b live-API coverage suite
+  (`flutter test --tags=live --run-skipped`), which crawls a real school over the network (message
+  attachments, multi-week timetable/exam/homework data) and dominates runtime (~110s on top of
+  `full`'s ~30s) whenever `test/live/credentials.local.json` is configured — see
+  `test/live/README.md`. Never run in CI, and not run by default in the hook either; opt in only
+  when you've touched the request/parsing layer and want to confirm against the real API surface.
 
-To opt into light mode for the *next* Stop only, run this before finishing:
+To opt into a non-default level for the *next* Stop only, run this before finishing:
 ```shell
-mkdir -p .claude && echo light > .claude/.verify-level
+mkdir -p .claude && echo light > .claude/.verify-level   # or: echo live > .claude/.verify-level
 ```
 This is one-shot: the hook deletes the marker after reading it, so the following turn defaults back
 to `full` unless you set it again. When in doubt, do nothing — `full` is the safe default.
