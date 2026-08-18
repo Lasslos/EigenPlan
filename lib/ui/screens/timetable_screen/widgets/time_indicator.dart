@@ -1,10 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
-import 'package:your_schedule/utils.dart';
+import 'package:your_schedule/ui/shared/timed_refresh.dart';
+import 'package:your_schedule/util/date_utils.dart';
 
 class TimeIndicator extends ConsumerWidget {
   const TimeIndicator({super.key});
@@ -75,37 +74,4 @@ class TimeIndicator extends ConsumerWidget {
           );
         },
       );
-}
-
-class TimedRefresh extends StatefulWidget {
-  final Duration interval;
-  final Widget Function(DateTime time, BuildContext context) builder;
-
-  const TimedRefresh({
-    required this.interval,
-    required this.builder,
-    super.key,
-  });
-
-  @override
-  State<TimedRefresh> createState() => _TimedRefreshState();
-}
-
-class _TimedRefreshState extends State<TimedRefresh> {
-  late Timer _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(widget.interval, (_) => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    _timer.cancel();
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.builder(DateTime.now(), context);
 }

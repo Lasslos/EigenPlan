@@ -1,0 +1,14 @@
+{
+  "dashboardCards": [
+    {
+      "id": 146,
+      "title": "Login zu WebUntis und UntisMobile",
+      "subtitle": "Hier findet ihr die Anleitung um euch bei WebUntis und UntisMobile (App) anzumelden.",
+      "hasAttachments": true,
+      "headerColor": "ffa94d",
+      "orderNo": 10,
+      "status": "READ",
+      "icon": "megaphone"
+    }
+  ]
+}

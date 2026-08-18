@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:your_schedule/core/provider/selected_timetable_resource_provider.dart';
 import 'package:your_schedule/settings/view_mode_provider.dart';
-import 'package:your_schedule/ui/screens/home_screen/home_screen_date_provider.dart';
-import 'package:your_schedule/ui/screens/home_screen/widgets/timetable_view.dart';
 import 'package:your_schedule/ui/screens/timetable_picker_screen/timetable_picker_screen.dart';
-import 'package:your_schedule/ui/shared/my_drawer.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/timetable_screen_date_provider.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/widgets/timetable_view.dart';
 import 'package:your_schedule/utils.dart';
 
-class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+class TimetableScreen extends ConsumerWidget {
+  const TimetableScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,7 +43,7 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.today),
             onPressed: () {
-              ref.read(homeScreenDateProvider.notifier).date = Date.now();
+              ref.read(timetableScreenDateProvider.notifier).date = Date.now();
             },
             tooltip: 'Zur jetzigen Woche springen',
           ),
@@ -57,7 +56,6 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      drawer: const MyDrawer(),
       body: const TimeTableView(),
     );
   }

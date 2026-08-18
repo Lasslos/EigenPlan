@@ -9,10 +9,17 @@ import 'package:your_schedule/utils.dart';
 class TimeGridWidget extends ConsumerStatefulWidget {
   const TimeGridWidget({
     required this.child,
+    this.footer,
     super.key,
   });
 
   final Widget child;
+
+  /// An optional widget placed after the time-grid/[child] row, inside the same
+  /// [SingleChildScrollView] — it scrolls together with the grid instead of being a
+  /// fixed overlay, and sits below the fixed-height grid row rather than sharing its
+  /// height budget, so it can never compress/overlap the periods near the end of the day.
+  final Widget? footer;
 
   @override
   ConsumerState<TimeGridWidget> createState() => _TimeGridWidgetState();
@@ -41,27 +48,33 @@ class _TimeGridWidgetState extends ConsumerState<TimeGridWidget> {
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      child: SizedBox(
-        height: height,
-        child: Row(
-          children: [
-            Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: height,
+            child: Row(
               children: [
-                const SizedBox(height: 42),
-                Expanded(
-                  child: _buildTimeGridWidget(context),
+                Column(
+                  children: [
+                    const SizedBox(height: 42),
+                    Expanded(
+                      child: _buildTimeGridWidget(context),
+                    ),
+                  ],
                 ),
+                const VerticalDivider(
+                  width: 1,
+                  thickness: 0.7,
+                ),
+                const SizedBox(width: 4),
+                Expanded(child: widget.child),
+                const SizedBox(width: 4),
               ],
             ),
-            const VerticalDivider(
-              width: 1,
-              thickness: 0.7,
-            ),
-            const SizedBox(width: 4),
-            Expanded(child: widget.child),
-            const SizedBox(width: 4),
-          ],
-        ),
+          ),
+          if (widget.footer != null) widget.footer!,
+        ],
       ),
     );
   }

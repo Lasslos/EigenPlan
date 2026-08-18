@@ -7,9 +7,9 @@ import 'package:your_schedule/core/provider/timetable_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/settings/view_mode_provider.dart';
-import 'package:your_schedule/ui/screens/home_screen/home_screen_date_provider.dart';
-import 'package:your_schedule/ui/screens/home_screen/widgets/grid_entry_layout.dart';
-import 'package:your_schedule/ui/screens/home_screen/widgets/time_indicator.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/timetable_screen_date_provider.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/widgets/grid_entry_layout.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/widgets/time_indicator.dart';
 import 'package:your_schedule/utils.dart';
 
 class WeekView extends ConsumerStatefulWidget {
@@ -26,7 +26,7 @@ class _WeekViewState extends ConsumerState<WeekView> {
   @override
   void initState() {
     super.initState();
-    currentDate = ref.read(homeScreenDateProvider);
+    currentDate = ref.read(timetableScreenDateProvider);
     var index = _dateToIndex(currentDate);
     _pageController = PageController(initialPage: index);
   }
@@ -39,7 +39,7 @@ class _WeekViewState extends ConsumerState<WeekView> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<Date>(homeScreenDateProvider, (previous, next) {
+    ref.listen<Date>(timetableScreenDateProvider, (previous, next) {
       var normalizedCurrentDate = Week.fromDate(currentDate).startDate;
       var normalizedNext = Week.fromDate(next).startDate;
       if (normalizedCurrentDate != normalizedNext) {
@@ -54,12 +54,12 @@ class _WeekViewState extends ConsumerState<WeekView> {
     return PageView.builder(
       controller: _pageController,
       onPageChanged: (index) {
-        var oldDate = ref.read(homeScreenDateProvider);
+        var oldDate = ref.read(timetableScreenDateProvider);
         var daysRelativeToStartOfWeek = oldDate.differenceInDays(
           Week.fromDate(oldDate).startDate,
         );
         currentDate = _indexToDate(index, daysRelativeToStartOfWeek);
-        ref.read(homeScreenDateProvider.notifier).date = currentDate;
+        ref.read(timetableScreenDateProvider.notifier).date = currentDate;
       },
       itemBuilder: (BuildContext context, int index) {
         return _Page(index: index);
@@ -112,7 +112,7 @@ class _Page extends ConsumerWidget {
                 Flexible(
                   child: InkWell(
                     onTap: () {
-                      ref.read(homeScreenDateProvider.notifier).date =
+                      ref.read(timetableScreenDateProvider.notifier).date =
                           currentWeek.startDate.addDays(i);
                       ref
                           .read(viewModeSettingProvider.notifier)
