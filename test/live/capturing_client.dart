@@ -10,7 +10,13 @@ class CapturedExchange {
   final String responseBody;
   final String? requestBody;
 
-  const CapturedExchange(this.url, this.method, this.statusCode, this.responseBody, this.requestBody);
+  const CapturedExchange(
+    this.url,
+    this.method,
+    this.statusCode,
+    this.responseBody,
+    this.requestBody,
+  );
 
   /// A short, human-readable label for this exchange — the JSON-RPC `method` for RPC
   /// POSTs (which all share the same URL, so the URL alone isn't distinguishing), or
@@ -70,7 +76,13 @@ class CapturingClient extends http.BaseClient {
         request.url,
         request.method,
         response.statusCode,
-        utf8.decode(bytes),
+        // allowMalformed: this log exists for JSON endpoints (checkParity needs
+        // to re-decode responseBody as JSON) — but a live-coverage run now also
+        // exercises binary downloads (see downloadAttachment in
+        // api_coverage_live_test.dart), which aren't valid UTF-8. Nothing reads
+        // responseBody for those exchanges, so a lossy decode here is fine; a
+        // thrown FormatException previously took down the whole test instead.
+        utf8.decode(bytes, allowMalformed: true),
         request is http.Request ? request.body : null,
       ),
     );

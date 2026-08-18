@@ -72,7 +72,55 @@ const timetableEntriesKnownGaps = <String>{
   'days[].gridEntries[].moved',
   'days[].gridEntries[].durationTotal',
   'days[].gridEntries[].link',
+  // Server-computed layout suggestion, deliberately not modeled — GridEntryLayout
+  // computes its own layout client-side instead (see docs/api/spec/NOTES.md §4).
+  'days[].gridEntries[].layoutStartPosition',
+  'days[].gridEntries[].layoutWidth',
+  'days[].gridEntries[].layoutGroup',
   // A top-level `errors` field observed live, never in any doc capture — shape
   // unknown (was empty/absent-looking in every observed response so far).
   'errors',
 };
+
+/// `GET /timetable/filter` — see
+/// `lib/core/untis/models/timetable_filter/timetable_filter_response.dart`. Fields
+/// always empty with **UNKNOWN** item shape in every capture so far (2026-08 probe
+/// against wolfsburger-oberschule, all four resourceTypes) — deliberately not
+/// modeled, see docs/api/spec/openapi.yaml's `TimetableFilterResponse`.
+const timetableFilterKnownGaps = <String>{
+  'buildings',
+  'departments',
+  'roomGroups',
+  'resourceTypes',
+  'assignmentGroups',
+  'resources',
+  'subjects',
+  'students[].assignmentGroups',
+  'rooms[].roomGroups',
+};
+
+/// A raw JSON value counts as "still empty" if it's `null`, `[]`, `{}`, or `''` —
+/// the shapes `openapi.yaml` documents dozens of fields as ("**UNKNOWN** item
+/// shape — always empty/null in captures"). [findUnparsedKeys]'s presence-based
+/// diff can't tell "field we never modeled" apart from "field that's now
+/// populated and we're silently ignoring real data" — a field already on the
+/// [userDataKnownGaps]/[timetableEntriesKnownGaps] allow-lists, or one that's
+/// loosely typed (`List<dynamic>`/`Map<String, dynamic>?`) so parity already
+/// consumes the key, stays silent either way. Use this alongside those
+/// allow-lists, on the raw value itself, wherever `openapi.yaml` makes an
+/// "always empty" claim — see call sites in `api_coverage_live_test.dart`.
+bool isStillEmpty(dynamic value) {
+  if (value == null) {
+    return true;
+  }
+  if (value is List) {
+    return value.isEmpty;
+  }
+  if (value is Map) {
+    return value.isEmpty;
+  }
+  if (value is String) {
+    return value.isEmpty;
+  }
+  return false;
+}
