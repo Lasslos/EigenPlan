@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:your_schedule/core/provider/filters.dart';
+import 'package:your_schedule/core/provider/selected_timetable_resource_provider.dart';
 import 'package:your_schedule/core/provider/timetable_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -38,26 +39,25 @@ class _WeekViewState extends ConsumerState<WeekView> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<Date>(
-      homeScreenDateProvider,
-      (previous, next) {
-        var normalizedCurrentDate = Week.fromDate(currentDate).startDate;
-        var normalizedNext = Week.fromDate(next).startDate;
-        if (normalizedCurrentDate != normalizedNext) {
-          _pageController.animateToPage(
-            _dateToIndex(normalizedNext),
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-          );
-        }
-      },
-    );
+    ref.listen<Date>(homeScreenDateProvider, (previous, next) {
+      var normalizedCurrentDate = Week.fromDate(currentDate).startDate;
+      var normalizedNext = Week.fromDate(next).startDate;
+      if (normalizedCurrentDate != normalizedNext) {
+        _pageController.animateToPage(
+          _dateToIndex(normalizedNext),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
 
     return PageView.builder(
       controller: _pageController,
       onPageChanged: (index) {
         var oldDate = ref.read(homeScreenDateProvider);
-        var daysRelativeToStartOfWeek = oldDate.differenceInDays(Week.fromDate(oldDate).startDate);
+        var daysRelativeToStartOfWeek = oldDate.differenceInDays(
+          Week.fromDate(oldDate).startDate,
+        );
         currentDate = _indexToDate(index, daysRelativeToStartOfWeek);
         ref.read(homeScreenDateProvider.notifier).date = currentDate;
       },
@@ -71,9 +71,7 @@ class _WeekViewState extends ConsumerState<WeekView> {
 class _Page extends ConsumerWidget {
   final int index;
 
-  const _Page({
-    required this.index,
-  });
+  const _Page({required this.index});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -81,20 +79,25 @@ class _Page extends ConsumerWidget {
     Week currentWeek = Week.fromDate(currentDate);
     List<List<GridEntry>> days = [];
 
-    var filters = ref.watch(filtersProvider);
-
     var session = ref.read(selectedUntisSessionProvider) as ActiveUntisSession;
-    var subjects = session.userData.subjects;
-    var timeTable = ref.watch(timeTableProvider(session, Week.fromDate(currentDate)));
+    var resource = ref.watch(effectiveTimetableResourceProvider(session));
+    var overrides = resource == null
+        ? const <String, bool>{}
+        : ref.watch(courseOverridesForResourceProvider(resource));
+    var timeTable = resource == null
+        ? <Date, TimetableDay>{}
+        : ref.watch(
+            timeTableProvider(session, Week.fromDate(currentDate), resource),
+          );
     //Note: Week starts on Saturday to show next week after Friday
     for (var i = 2; i < 7; i++) {
       days.add(
-        (timeTable[currentWeek.startDate.addDays(i)]?.gridEntries ?? []).where(
-          (entry) {
-            var subjectId = entry.resolveSubject(subjects)?.key;
-            return subjectId == null || filters.contains(subjectId);
-          },
-        ).toList(),
+        (timeTable[currentWeek.startDate.addDays(i)]?.gridEntries ?? []).where((
+          entry,
+        ) {
+          var courseKey = entry.courseKey;
+          return courseKey == null || (overrides[courseKey] ?? true);
+        }).toList(),
       );
     }
 
@@ -109,18 +112,25 @@ class _Page extends ConsumerWidget {
                 Flexible(
                   child: InkWell(
                     onTap: () {
-                      ref.read(homeScreenDateProvider.notifier).date = currentWeek.startDate.addDays(i);
-                      ref.read(viewModeSettingProvider.notifier).switchViewMode();
+                      ref.read(homeScreenDateProvider.notifier).date =
+                          currentWeek.startDate.addDays(i);
+                      ref
+                          .read(viewModeSettingProvider.notifier)
+                          .switchViewMode();
                     },
                     child: Center(
                       child: RichText(
                         textAlign: TextAlign.center,
                         text: TextSpan(
-                          text: currentWeek.startDate.addDays(i).format(DateFormat('E\n')),
+                          text: currentWeek.startDate
+                              .addDays(i)
+                              .format(DateFormat('E\n')),
                           style: Theme.of(context).textTheme.bodyLarge,
                           children: [
                             TextSpan(
-                              text: currentWeek.startDate.addDays(i).format(DateFormat('d. MMM')),
+                              text: currentWeek.startDate
+                                  .addDays(i)
+                                  .format(DateFormat('d. MMM')),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
@@ -136,24 +146,19 @@ class _Page extends ConsumerWidget {
           child: Stack(
             children: [
               Row(
-                children: List.generate(
-                  9,
-                  (index) {
-                    if (index % 2 == 1) {
-                      //Separator
-                      return const SizedBox(
-                        width: 2,
-                      );
-                    }
-                    return Flexible(
-                      fit: FlexFit.tight,
-                      child: GridEntryLayout(
-                        fontSize: 12,
-                        entries: days[index ~/ 2],
-                      ),
-                    );
-                  },
-                ),
+                children: List.generate(9, (index) {
+                  if (index % 2 == 1) {
+                    //Separator
+                    return const SizedBox(width: 2);
+                  }
+                  return Flexible(
+                    fit: FlexFit.tight,
+                    child: GridEntryLayout(
+                      fontSize: 12,
+                      entries: days[index ~/ 2],
+                    ),
+                  );
+                }),
               ),
               if (index == _dateToIndex(Date.now())) const TimeIndicator(),
             ],
@@ -166,9 +171,12 @@ class _Page extends ConsumerWidget {
 
 //To allow backwards scrolling, today's index is set to 1 << 30 (Max int32 value / 2)
 int _dateToIndex(Date date) {
-  return (date.differenceInDays(Week.now().startDate) / 7.0).floor() + (1 << 30);
+  return (date.differenceInDays(Week.now().startDate) / 7.0).floor() +
+      (1 << 30);
 }
 
 Date _indexToDate(int index, int daysRelativeToStartOfWeek) {
-  return Week.now().startDate.addDays((index - (1 << 30)) * 7 + daysRelativeToStartOfWeek);
+  return Week.now().startDate.addDays(
+    (index - (1 << 30)) * 7 + daysRelativeToStartOfWeek,
+  );
 }

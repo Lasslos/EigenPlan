@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:your_schedule/core/provider/selected_timetable_resource_provider.dart';
 import 'package:your_schedule/core/provider/timetable_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -20,17 +21,41 @@ class TimeTableView extends ConsumerWidget {
     Date date = ref.watch(homeScreenDateProvider);
     // Eager initialization of the time table providers
     var session = ref.watch(selectedUntisSessionProvider);
-    DateTime timestamp = ref.watch(cachedTimeTableTimestampProvider(session, Week.fromDate(date)));
+    var resource = ref.watch(effectiveTimetableResourceProvider(session));
+    if (resource == null) {
+      // No timetable resource at all for this session (e.g. some anonymous
+      // accounts) — nothing to fetch or display.
+      return const SizedBox.shrink();
+    }
+    DateTime timestamp = ref.watch(
+      cachedTimeTableTimestampProvider(session, Week.fromDate(date), resource),
+    );
     ref
-      ..watch(timeTableProvider(session, Week.fromDate(date)))
-      ..watch(timeTableProvider(session, Week.fromDate(date.addWeeks(1))))
-      ..watch(timeTableProvider(session, Week.fromDate(date.addWeeks(-1))));
+      ..watch(timeTableProvider(session, Week.fromDate(date), resource))
+      ..watch(
+        timeTableProvider(session, Week.fromDate(date.addWeeks(1)), resource),
+      )
+      ..watch(
+        timeTableProvider(session, Week.fromDate(date.addWeeks(-1)), resource),
+      );
 
     return RefreshIndicator(
       onRefresh: () async {
         var session = ref.read(selectedUntisSessionProvider);
-        ref.invalidate(requestTimetableEntriesProvider(session, Week.fromDate(date)));
-        await ref.read(requestTimetableEntriesProvider(session, Week.fromDate(date)).future);
+        ref.invalidate(
+          requestTimetableEntriesProvider(
+            session,
+            Week.fromDate(date),
+            resource,
+          ),
+        );
+        await ref.read(
+          requestTimetableEntriesProvider(
+            session,
+            Week.fromDate(date),
+            resource,
+          ).future,
+        );
       },
       child: SafeArea(
         child: Column(
@@ -39,7 +64,9 @@ class TimeTableView extends ConsumerWidget {
               child: TimeGridWidget(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
-                  child: viewMode == ViewMode.day ? const DayView() : const WeekView(),
+                  child: viewMode == ViewMode.day
+                      ? const DayView()
+                      : const WeekView(),
                 ),
               ),
             ),

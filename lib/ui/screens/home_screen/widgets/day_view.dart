@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:your_schedule/core/provider/filters.dart';
+import 'package:your_schedule/core/provider/selected_timetable_resource_provider.dart';
 import 'package:your_schedule/core/provider/timetable_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -38,18 +39,15 @@ class _DayViewState extends ConsumerState<DayView> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<Date>(
-      homeScreenDateProvider,
-      (previous, next) {
-        if (currentDate != next) {
-          _pageController.animateToPage(
-            _dateToIndex(next),
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-          );
-        }
-      },
-    );
+    ref.listen<Date>(homeScreenDateProvider, (previous, next) {
+      if (currentDate != next) {
+        _pageController.animateToPage(
+          _dateToIndex(next),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
 
     return PageView.builder(
       controller: _pageController,
@@ -74,9 +72,15 @@ class _Page extends ConsumerWidget {
     Date currentDate = _indexToDate(index);
 
     var session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
-    var timetableDay = ref.watch(timeTableProvider(session, Week.fromDate(currentDate)))[currentDate];
-    var filters = ref.watch(filtersProvider);
-    var subjects = session.userData.subjects;
+    var resource = ref.watch(effectiveTimetableResourceProvider(session));
+    var timetableDay = resource == null
+        ? null
+        : ref.watch(
+            timeTableProvider(session, Week.fromDate(currentDate), resource),
+          )[currentDate];
+    var overrides = resource == null
+        ? const <String, bool>{}
+        : ref.watch(courseOverridesForResourceProvider(resource));
 
     return Center(
       child: Column(
@@ -109,14 +113,10 @@ class _Page extends ConsumerWidget {
               children: [
                 GridEntryLayout(
                   fontSize: 12,
-                  entries: (timetableDay?.gridEntries ?? [])
-                      .where(
-                        (entry) {
-                          var subjectId = entry.resolveSubject(subjects)?.key;
-                          return subjectId == null || filters.contains(subjectId);
-                        },
-                      )
-                      .toList(),
+                  entries: (timetableDay?.gridEntries ?? []).where((entry) {
+                    var courseKey = entry.courseKey;
+                    return courseKey == null || (overrides[courseKey] ?? true);
+                  }).toList(),
                 ),
                 if (index == _dateToIndex(Date.now())) const TimeIndicator(),
               ],
