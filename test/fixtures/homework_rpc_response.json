@@ -1,0 +1,58 @@
+{
+  "jsonrpc": "2.0",
+  "id": "0",
+  "result": {
+    "homeWorks": [
+      {
+        "id": 16372,
+        "lessonId": 7553,
+        "startDate": "2026-03-15",
+        "endDate": "2026-03-20",
+        "text": "Macht einfach irgendetwas",
+        "remark": null,
+        "completed": false,
+        "attachments": []
+      },
+      {
+        "id": 16521,
+        "lessonId": 7655,
+        "startDate": "2026-03-20",
+        "endDate": "2026-03-21",
+        "text": "Lernt wie man mit C programmiert bis morgen",
+        "remark": null,
+        "completed": false,
+        "attachments": []
+      },
+      {
+        "id": 16427,
+        "lessonId": 7986,
+        "startDate": "2026-03-16",
+        "endDate": "2026-03-23",
+        "text": "Eine Aufgabe",
+        "remark": null,
+        "completed": false,
+        "attachments": []
+      }
+    ],
+    "lessonsById": {
+      "7553": {
+        "id": 7553,
+        "subjectId": 15,
+        "klassenIds": [1517, 1520, 1523, 1741],
+        "teacherIds": [142]
+      },
+      "7986": {
+        "id": 7986,
+        "subjectId": 123,
+        "klassenIds": [1517],
+        "teacherIds": [1304]
+      },
+      "7655": {
+        "id": 7655,
+        "subjectId": 35,
+        "klassenIds": [1517],
+        "teacherIds": [1118]
+      }
+    }
+  }
+}
