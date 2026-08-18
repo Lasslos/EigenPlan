@@ -1,0 +1,35 @@
+{
+  "resourceType": "STUDENT",
+  "preSelected": null,
+  "buildings": [],
+  "departments": [],
+  "roomGroups": [],
+  "resourceTypes": [],
+  "assignmentGroups": [],
+  "classes": [
+    {
+      "class": { "id": 1145, "shortName": "6a", "longName": "6a OBS", "displayName": "6a" },
+      "classTeacher1": null,
+      "classTeacher2": null,
+      "department": { "id": 1, "shortName": "WOBS", "longName": "WOBS", "displayName": "WOBS" }
+    }
+  ],
+  "resources": [],
+  "rooms": [],
+  "subjects": [],
+  "students": [
+    {
+      "student": { "id": 6542, "shortName": "MusterschuelerA", "longName": "Musterschüler A", "displayName": "Musterschüler A" },
+      "classes": [
+        {
+          "class": { "id": 1145, "shortName": "6a", "longName": "6a OBS", "displayName": "6a" },
+          "dateRange": { "start": "2026-08-13", "end": "2027-07-07" },
+          "department": { "id": 1, "shortName": "WOBS", "longName": "WOBS", "displayName": "WOBS" }
+        }
+      ],
+      "assignmentGroups": [],
+      "imageUrl": null
+    }
+  ],
+  "teachers": []
+}

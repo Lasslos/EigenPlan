@@ -1,0 +1,22 @@
+{
+  "resourceType": "CLASS",
+  "preSelected": { "id": 1139, "shortName": "5d", "longName": "5d OBS", "displayName": "5d" },
+  "buildings": [],
+  "departments": [],
+  "roomGroups": [],
+  "resourceTypes": [],
+  "assignmentGroups": [],
+  "classes": [
+    {
+      "class": { "id": 1208, "shortName": "10a", "longName": "10a OBS", "displayName": "10a" },
+      "classTeacher1": { "id": 98, "shortName": "ML1", "longName": "Musterlehrer1", "displayName": "ML1" },
+      "classTeacher2": null,
+      "department": { "id": 1, "shortName": "WOBS", "longName": "WOBS", "displayName": "WOBS" }
+    }
+  ],
+  "resources": [],
+  "rooms": [],
+  "subjects": [],
+  "students": [],
+  "teachers": []
+}

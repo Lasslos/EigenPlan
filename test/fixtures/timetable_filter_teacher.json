@@ -1,0 +1,21 @@
+{
+  "resourceType": "TEACHER",
+  "preSelected": { "id": 134, "shortName": "ML", "longName": "Musterlehrer", "displayName": "ML" },
+  "buildings": [],
+  "departments": [],
+  "roomGroups": [],
+  "resourceTypes": [],
+  "assignmentGroups": [],
+  "classes": [],
+  "resources": [],
+  "rooms": [],
+  "subjects": [],
+  "students": [],
+  "teachers": [
+    {
+      "teacher": { "id": 134, "shortName": "ML", "longName": "Musterlehrer", "displayName": "ML" },
+      "departments": [{ "id": 1, "shortName": "WOBS", "longName": "WOBS", "displayName": "WOBS" }],
+      "imageUrl": null
+    }
+  ]
+}

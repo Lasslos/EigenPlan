@@ -2,11 +2,18 @@ import 'package:dart_extensions_methods/dart_extension_methods.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:your_schedule/core/provider/filters.dart';
+import 'package:your_schedule/core/provider/selected_timetable_resource_provider.dart';
 import 'package:your_schedule/core/provider/timetable_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/utils.dart';
 
+/// Course-visibility picker for whichever timetable is currently shown on the home
+/// screen (`effectiveTimetableResourceProvider`). Every course is visible by
+/// default; toggling one here writes an override to `filtersProvider`, scoped to
+/// this one resource only — switching to a different timetable via the home screen's
+/// "Stundenplan wechseln" picker and coming back here shows/edits *that* timetable's
+/// own overrides instead.
 class FilterScreen extends ConsumerStatefulWidget {
   const FilterScreen({super.key});
 
@@ -20,7 +27,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   bool showSearch = false;
   String searchQuery = '';
 
-  List<int> periods = [];
+  List<String> periods = [];
 
   @override
   void initState() {
@@ -37,7 +44,9 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     // Since build must be called regardless, we can't compute the list in here. To still apply updates from other providers, we listen and rebuild in case.
 
     ref.listen(
-      selectedUntisSessionProvider.select((value) => (value as ActiveUntisSession).userData),
+      selectedUntisSessionProvider.select(
+        (value) => (value as ActiveUntisSession).userData,
+      ),
       (_, next) {
         setState(() {
           _initPeriods();
@@ -46,61 +55,79 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     );
 
     var session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
-    for (var i = -2; i < 3; i++) {
-      ref.listen(
-        timeTableProvider(session, Week.relative(i)),
-        (_, next) {
+    var resource = ref.watch(effectiveTimetableResourceProvider(session));
+    if (resource != null) {
+      for (var i = -2; i < 3; i++) {
+        ref.listen(timeTableProvider(session, Week.relative(i), resource), (
+          _,
+          next,
+        ) {
           setState(() {
             _initPeriods();
           });
-        },
-      );
+        });
+      }
     }
 
     // Start of real build logic
 
-    var filters = ref.watch(filtersProvider);
-    var timeTableWeeks = [for (var i = -2; i < 3; i++) ref.watch(timeTableProvider(session, Week.relative(i)))];
+    var overrides = resource == null
+        ? const <String, bool>{}
+        : ref.watch(courseOverridesForResourceProvider(resource));
+    var resourceKey = resource?.storageKey;
+    var selected = {
+      for (final p in periods)
+        if (overrides[p] ?? true) p,
+    };
+
+    var timeTableWeeks = resource == null
+        ? <TimeTableWeek>[]
+        : [
+            for (var i = -2; i < 3; i++)
+              ref.watch(timeTableProvider(session, Week.relative(i), resource)),
+          ];
     var gridEntries = _getRelevantGridEntries(timeTableWeeks);
 
-    var subjects = session.userData.subjects;
+    final gridChildren = periods.map<Widget>((e) {
+      GridEntry exampleEntry = gridEntries.firstWhere(
+        (entry) => e == entry.courseKey,
+      );
+      var subjectText = exampleEntry
+          .positionOfType('SUBJECT')
+          ?.current
+          ?.shortName;
+      var teacherText = exampleEntry
+          .positionOfType('TEACHER')
+          ?.current
+          ?.shortName;
+      var roomText = exampleEntry.positionOfType('ROOM')?.current?.shortName;
 
-    final gridChildren = periods.map<Widget>(
-      (e) {
-        GridEntry exampleEntry = gridEntries.firstWhere((entry) => e == entry.resolveSubject(subjects)?.key);
-        Subject? subject = subjects[e];
-        var teacherText = exampleEntry.positionOfType('TEACHER')?.current.shortName;
-        var roomText = exampleEntry.positionOfType('ROOM')?.current.shortName;
-
-        return Padding(
-          key: ValueKey(e),
-          padding: const EdgeInsets.all(4.0),
-          child: Selectable(
-            selected: filters.contains(e),
-            onChanged: (bool value) {
-              if (value) {
-                ref.read(filtersProvider.notifier).add(e);
-              } else {
-                ref.read(filtersProvider.notifier).remove(e);
-              }
-            },
-            child: Center(
-              child: FilterGridTile(
-                subject: subject?.name ?? 'Kein Fach',
-                teacher: teacherText ?? 'Kein Lehrer',
-                room: roomText ?? 'Kein Raum',
-              ),
+      return Padding(
+        key: ValueKey(e),
+        padding: const EdgeInsets.all(4.0),
+        child: Selectable(
+          selected: selected.contains(e),
+          onChanged: (bool value) {
+            ref
+                .read(filtersProvider.notifier)
+                .setOverride(resourceKey!, e, value);
+          },
+          child: Center(
+            child: FilterGridTile(
+              subject: subjectText ?? 'Kein Fach',
+              teacher: teacherText ?? 'Kein Lehrer',
+              room: roomText ?? 'Kein Raum',
             ),
           ),
-        );
-      },
-    ).toList();
+        ),
+      );
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
         leading: showSearch
             ? IconButton(
-          icon: const Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back),
                 onPressed: () {
                   setState(() {
                     showSearch = false;
@@ -115,23 +142,17 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
           duration: const Duration(milliseconds: 300),
           switchInCurve: Curves.easeInOut,
           switchOutCurve: Curves.easeInOut,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+          transitionBuilder: (child, animation) =>
+              FadeTransition(opacity: animation, child: child),
           child: !showSearch
-              ? const Row(
-                  children: [
-                    Text('Deine Kurse'),
-                    Spacer(),
-                  ],
-                )
+              ? const Row(children: [Text('Deine Kurse'), Spacer()])
               : Container(
                   height: 36,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(18),
-                    color: Theme.of(context).colorScheme.onSurface
-                        .withAlpha(30),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withAlpha(30),
                   ),
                   padding: const EdgeInsets.only(left: 10),
                   child: Center(
@@ -143,7 +164,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                             _initPeriods();
                           } else {
                             searchQuery = value;
-                            _filterPeriods(periods, filters, subjects, gridEntries);
+                            _filterPeriods(periods, gridEntries);
                           }
                         });
                       },
@@ -156,9 +177,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                         border: InputBorder.none,
                         suffixIcon: IconButton(
                           iconSize: 18,
-                          icon: const Icon(
-                            Icons.close,
-                          ),
+                          icon: const Icon(Icons.close),
                           onPressed: () {
                             setState(() {
                               searchController.clear();
@@ -174,7 +193,29 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                 ),
         ),
         actions: [
-          if (!showSearch)
+          if (!showSearch && resourceKey != null) ...[
+            IconButton(
+              icon: const Icon(Icons.select_all),
+              tooltip: 'Alle auswählen',
+              onPressed: () {
+                ref
+                    .read(filtersProvider.notifier)
+                    .setOverridesForResource(resourceKey, {
+                      for (final p in periods) p: true,
+                    });
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.deselect),
+              tooltip: 'Alle abwählen',
+              onPressed: () {
+                ref
+                    .read(filtersProvider.notifier)
+                    .setOverridesForResource(resourceKey, {
+                      for (final p in periods) p: false,
+                    });
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.search),
               onPressed: () {
@@ -183,84 +224,113 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                 });
               },
             ),
+          ],
         ],
       ),
-      body: GridView.count(
-        crossAxisCount: 4,
-        children: gridChildren,
-      ),
+      body: GridView.count(crossAxisCount: 4, children: gridChildren),
     );
   }
 
   void _initPeriods() {
     var session = ref.read(selectedUntisSessionProvider) as ActiveUntisSession;
-    var userData = session.userData;
-    periods = userData.subjects.keys.toList();
-
-    var filters = ref.read(filtersProvider);
-    var subjects = userData.subjects;
-    var timeTableWeeks = [for (var i = -2; i < 3; i++) ref.read(timeTableProvider(session, Week.relative(i)))];
+    var resource = ref.read(effectiveTimetableResourceProvider(session));
+    var overrides = resource == null
+        ? const <String, bool>{}
+        : ref.read(courseOverridesForResourceProvider(resource));
+    var timeTableWeeks = resource == null
+        ? <TimeTableWeek>[]
+        : [
+            for (var i = -2; i < 3; i++)
+              ref.read(timeTableProvider(session, Week.relative(i), resource)),
+          ];
     var gridEntries = _getRelevantGridEntries(timeTableWeeks);
 
-    _sortPeriods(periods, filters, subjects);
-    _filterPeriods(periods, filters, subjects, gridEntries);
+    periods = {
+      for (final e in gridEntries)
+        if (e.courseKey != null) e.courseKey!,
+    }.toList();
+
+    var selected = {
+      for (final p in periods)
+        if (overrides[p] ?? true) p,
+    };
+
+    _sortPeriods(periods, selected, gridEntries);
+    _filterPeriods(periods, gridEntries);
   }
 
   List<GridEntry> _getRelevantGridEntries(List<TimeTableWeek> timeTableWeeks) {
     return [
       for (var week in timeTableWeeks)
-        for (var day in week.values)
-          ...day.gridEntries,
+        for (var day in week.values) ...day.gridEntries,
     ];
   }
 
-  void _sortPeriods(List<int> periods, Set<int> filters, Map<int, Subject> subjects) {
+  void _sortPeriods(
+    List<String> periods,
+    Set<String> selected,
+    List<GridEntry> gridEntries,
+  ) {
     periods.sort((a, b) {
-      if (filters.contains(a) && !filters.contains(b)) {
+      if (selected.contains(a) && !selected.contains(b)) {
         return -1;
-      } else if (!filters.contains(a) && filters.contains(b)) {
+      } else if (!selected.contains(a) && selected.contains(b)) {
         return 1;
       } else {
-        return subjects[a]?.name.compareTo(subjects[b]?.name ?? '') ?? 0;
+        return a.compareTo(b);
       }
     });
   }
 
-  void _filterPeriods(
-    List<int> periods,
-    Set<int> filters,
-    Map<int, Subject> subjects,
-    List<GridEntry> gridEntries,
-  ) {
-    // Filter every subject with no example entry in the visible weeks (nothing to
-    // preview, and possibly a stale/no-longer-taught subject).
-    periods
-      ..retainWhere((e) {
-        return gridEntries.any((entry) => entry.resolveSubject(subjects)?.key == e);
-      })
+  void _filterPeriods(List<String> periods, List<GridEntry> gridEntries) {
+    // Filter by search query
+    periods.retainWhere((e) {
+      var exampleEntry = gridEntries.firstWhereOrNull(
+        (entry) => entry.courseKey == e,
+      );
+      var subjectName = exampleEntry?.positionOfType('SUBJECT')?.current;
+      var teacherName = exampleEntry?.positionOfType('TEACHER')?.current;
+      var roomName = exampleEntry?.positionOfType('ROOM')?.current;
 
-      // Filter by search query
-      ..retainWhere((e) {
-        var exampleEntry = gridEntries.firstWhereOrNull((entry) => entry.resolveSubject(subjects)?.key == e);
-        var subject = subjects[e];
-        var teacherName = exampleEntry?.positionOfType('TEACHER')?.current;
-        var roomName = exampleEntry?.positionOfType('ROOM')?.current;
-
-        var accept = false;
-        if (subject != null) {
-          accept = subject.name.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-          accept = subject.longName.toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-        }
-        if (teacherName != null) {
-          accept = (teacherName.shortName ?? '').toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-          accept = (teacherName.longName ?? '').toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-        }
-        if (roomName != null) {
-          accept = (roomName.shortName ?? '').toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-          accept = (roomName.longName ?? '').toLowerCase().contains(searchQuery.toLowerCase()) || accept;
-        }
-        return accept;
-      });
+      var accept = false;
+      if (subjectName != null) {
+        accept =
+            (subjectName.shortName ?? '').toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ) ||
+            accept;
+        accept =
+            (subjectName.longName ?? '').toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ) ||
+            accept;
+      }
+      if (teacherName != null) {
+        accept =
+            (teacherName.shortName ?? '').toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ) ||
+            accept;
+        accept =
+            (teacherName.longName ?? '').toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ) ||
+            accept;
+      }
+      if (roomName != null) {
+        accept =
+            (roomName.shortName ?? '').toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ) ||
+            accept;
+        accept =
+            (roomName.longName ?? '').toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ) ||
+            accept;
+      }
+      return accept;
+    });
   }
 }
 
@@ -323,10 +393,9 @@ class Selectable extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withAlpha(30),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(30),
                         width: 2,
                       ),
                     ),

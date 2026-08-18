@@ -16,7 +16,7 @@ class CustomSubjectColors extends _$CustomSubjectColors {
   late int _userId;
 
   @override
-  Map<int, CustomSubjectColor> build() {
+  Map<String, CustomSubjectColor> build() {
     if (ref.watch(untisSessionsProvider.select((value) => value.isEmpty || value.first is InactiveUntisSession))) {
       return {};
     }
@@ -32,17 +32,17 @@ class CustomSubjectColors extends _$CustomSubjectColors {
   }
 
   void add(CustomSubjectColor color) {
-    state = Map.unmodifiable(Map.from(state)..addAll({color.subjectId: color}));
+    state = Map.unmodifiable(Map.from(state)..addAll({color.courseKey: color}));
     saveToPrefs();
   }
 
-  void addAll(Map<int, CustomSubjectColor> colors) {
+  void addAll(Map<String, CustomSubjectColor> colors) {
     state = Map.unmodifiable(Map.from(state)..addAll(colors));
     saveToPrefs();
   }
 
-  void remove(int id) {
-    state = Map.unmodifiable(Map.from(state)..remove(id));
+  void remove(String courseKey) {
+    state = Map.unmodifiable(Map.from(state)..remove(courseKey));
     saveToPrefs();
   }
 
@@ -54,7 +54,7 @@ class CustomSubjectColors extends _$CustomSubjectColors {
   Future<void> saveToPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-      '$_userId.custom_subject_colors',
+      '$_userId.course_colors',
       jsonEncode(
         state.values.map((e) => e.toJson()).toList(),
       ),
@@ -63,10 +63,11 @@ class CustomSubjectColors extends _$CustomSubjectColors {
 
   Future<void> initializeFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    final customSubjectColors = prefs.getString('$_userId.custom_subject_colors');
+    final customSubjectColors = prefs.getString('$_userId.course_colors');
     if (customSubjectColors != null) {
       state = Map.unmodifiable({
-        for (var e in jsonDecode(customSubjectColors) as List) e['subjectId'] as int: CustomSubjectColor.fromJson(e),
+        for (var e in jsonDecode(customSubjectColors) as List)
+          e['courseKey'] as String: CustomSubjectColor.fromJson(e),
       });
     }
   }

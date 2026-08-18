@@ -1,0 +1,23 @@
+{
+  "resourceType": "ROOM",
+  "preSelected": null,
+  "buildings": [],
+  "departments": [],
+  "roomGroups": [],
+  "resourceTypes": [],
+  "assignmentGroups": [],
+  "classes": [],
+  "resources": [],
+  "rooms": [
+    {
+      "room": { "id": 1, "shortName": "1a3", "longName": "5b", "displayName": "1a3" },
+      "capacity": 0,
+      "roomGroups": [],
+      "building": null,
+      "department": null
+    }
+  ],
+  "subjects": [],
+  "students": [],
+  "teachers": []
+}

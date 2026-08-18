@@ -28,7 +28,10 @@ abstract class GridEntryPositionElement with _$GridEntryPositionElement {
 @freezed
 abstract class GridEntryPositionItem with _$GridEntryPositionItem {
   const factory GridEntryPositionItem({
-    required GridEntryPositionElement current,
+    /// Null when a substitution removed this position with nothing filling it back
+    /// in — e.g. a lesson's teacher is absent with no covering teacher assigned.
+    /// [removed] still carries the pre-substitution value in that case.
+    GridEntryPositionElement? current,
     /// The pre-substitution value, when [current] is a substitution (room change,
     /// covering teacher, ...). Populated with `current`/`removed` both set and their
     /// respective `status` set to `ADDED`/`REMOVED`.
@@ -60,6 +63,13 @@ abstract class GridEntryDuration with _$GridEntryDuration {
 
 /// One rendered timetable cell (`GET /timetable/entries`). Supersedes the legacy
 /// `getTimetable2017`'s flat `TimeTablePeriod` list.
+///
+/// The server also returns a suggested `layoutStartPosition`/`layoutWidth`/
+/// `layoutGroup` (0-1000 fractions of the day column), deliberately not modeled here —
+/// they assume every period the server knows about is being rendered, which breaks
+/// down once the filter screen can hide individual courses. Layout is instead computed
+/// client-side over whatever's actually visible; see `grid_entry_layout.dart` and
+/// `docs/api/spec/NOTES.md` §4.
 @freezed
 abstract class GridEntry with _$GridEntry {
   @JsonSerializable(explicitToJson: true)
@@ -67,14 +77,6 @@ abstract class GridEntry with _$GridEntry {
     required GridEntryDuration duration,
     required String type,
     required String status,
-    /// 0-1000 horizontal offset within the day column, paired with [layoutWidth].
-    required int layoutStartPosition,
-    /// Out of 1000. Render this directly — the server has already resolved
-    /// overlapping/concurrent periods into a proportional layout; there is no need to
-    /// (and no reason to try to) recompute this client-side. See
-    /// `docs/api/spec/NOTES.md` §4 and `docs/api/captures/home/timetable_entries_overlap_example.md`.
-    required int layoutWidth,
-    required int layoutGroup,
     @Default([]) List<int> ids,
     String? statusDetail,
     /// Suggested default color only — never authoritative. It tracks period
@@ -113,7 +115,7 @@ abstract class GridEntry with _$GridEntry {
         continue;
       }
       for (final item in slot) {
-        if (item.current.type == type) {
+        if (item.current?.type == type) {
           return item;
         }
       }
@@ -125,7 +127,7 @@ abstract class GridEntry with _$GridEntry {
   /// slot can hold more than one value (e.g. two co-teachers on a joint event).
   List<GridEntryPositionItem> allPositionsOfType(String type) => [
         for (final slot in positionSlots)
-          if (slot != null) for (final item in slot) if (item.current.type == type) item,
+          if (slot != null) for (final item in slot) if (item.current?.type == type) item,
       ];
 
   bool get isCancelled => status == 'CANCELLED';

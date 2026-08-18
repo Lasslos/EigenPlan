@@ -34,24 +34,84 @@ class MessageDetailScreen extends ConsumerWidget {
               message.subject,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 4),
-            Text(
-              message.sender.displayName,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
             const Divider(height: 24),
-            for (var attachment in message.attachments)
-              AttachmentCard(
-                fileName: attachment.name,
-                onDownload: () => _openExternal(attachment),
+            // Earlier messages in the thread (e.g. the outgoing message this one
+            // replies to) come first, oldest to newest, so the thread reads
+            // chronologically ending with the current message below.
+            for (var entry in message.replyHistory)
+              _ThreadEntry(
+                session: session,
+                sender: entry.sender.displayName,
+                sentDateTime: entry.sentDateTime,
+                content: entry.content,
+                attachments: entry.attachments,
+                storageAttachments: entry.storageAttachments,
               ),
-            for (var attachment in message.storageAttachments)
-              _StorageAttachmentCard(session: session, attachment: attachment),
-            if (message.attachments.isNotEmpty || message.storageAttachments.isNotEmpty)
-              const SizedBox(height: 8),
-            Text(message.content ?? ''),
+            _ThreadEntry(
+              session: session,
+              sender: message.sender.displayName,
+              sentDateTime: message.sentDateTime,
+              content: message.content,
+              attachments: message.attachments,
+              storageAttachments: message.storageAttachments,
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ThreadEntry extends StatelessWidget {
+  const _ThreadEntry({
+    required this.session,
+    required this.sender,
+    required this.sentDateTime,
+    required this.content,
+    required this.attachments,
+    required this.storageAttachments,
+  });
+
+  final ActiveUntisSession session;
+  final String sender;
+  final DateTime sentDateTime;
+  final String? content;
+  final List<ExternalAttachment> attachments;
+  final List<StorageAttachment> storageAttachments;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(sender, style: theme.textTheme.titleSmall),
+              Text(
+                '${sentDateTime.day}.${sentDateTime.month.toString().padLeft(2, '0')}.${sentDateTime.year} '
+                '${sentDateTime.hour.toString().padLeft(2, '0')}:${sentDateTime.minute.toString().padLeft(2, '0')}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          for (var attachment in attachments)
+            AttachmentCard(
+              fileName: attachment.name,
+              onDownload: () => _openExternal(attachment),
+            ),
+          for (var attachment in storageAttachments)
+            _StorageAttachmentCard(session: session, attachment: attachment),
+          if (attachments.isNotEmpty || storageAttachments.isNotEmpty)
+            const SizedBox(height: 8),
+          Text(content ?? ''),
+        ],
       ),
     );
   }

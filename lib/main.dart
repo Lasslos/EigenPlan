@@ -11,13 +11,11 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
-import 'package:your_schedule/core/provider/filters.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/settings/sentry_provider.dart';
 import 'package:your_schedule/settings/theme_provider.dart';
-import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
 import 'package:your_schedule/ui/screens/home_screen/home_screen.dart';
 import 'package:your_schedule/ui/screens/loading_screen/loading_error_screen.dart';
 import 'package:your_schedule/ui/screens/login_screen/welcome_screen.dart';
@@ -166,14 +164,6 @@ class _InitializerState extends ConsumerState<Initializer> {
           builder: (context) => const HomeScreen(),
         ),
       );
-      // If there is a session and the filters are empty, navigate to filter screen
-      var filters = ref.read(filtersProvider);
-      if (filters.isEmpty) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FilterScreen()),
-        );
-      }
     }
 
     // Remove splash screen

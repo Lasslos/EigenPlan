@@ -1,0 +1,15 @@
+{
+  "showSymbols": false,
+  "showTeacherAbsences": true,
+  "showStudentAbsences": true,
+  "showRoomLocks": false,
+  "showResourceLocks": false,
+  "showForeignSubstitutions": true,
+  "showICal": true,
+  "showICalExport": true,
+  "showAllDropdownElements": false,
+  "highlightChanges": true,
+  "highlightExams": true,
+  "highlightCancellations": true,
+  "highlightExternalEntries": false
+}

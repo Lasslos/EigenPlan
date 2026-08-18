@@ -1,0 +1,31 @@
+{
+  "tenant": {
+    "id": "12345",
+    "displayName": "Musterschule",
+    "wuVersion": "1.0.0",
+    "language": "de",
+    "schoolLoginName": "musterschule"
+  },
+  "user": {
+    "id": 4379,
+    "username": "max.mustermann",
+    "person": {
+      "id": 4379,
+      "displayName": "Max Mustermann",
+      "imageUrl": "https://musterschule.webuntis.com/images/max.jpg"
+    },
+    "role": "STUDENT",
+    "referencedStudents": [],
+    "locale": "de",
+    "departmentId": 3,
+    "permissions": ["READ_MESSAGES"]
+  },
+  "schoolYear": {
+    "id": 7,
+    "name": "2026/2027",
+    "dateRange": {
+      "start": "2026-08-01T00:00:00",
+      "end": "2027-07-31T00:00:00"
+    }
+  }
+}

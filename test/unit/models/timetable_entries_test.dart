@@ -14,8 +14,8 @@ void main() {
     final day = response.days.single;
     expect(day.gridEntries, hasLength(1));
     final entry = day.gridEntries.single;
-    expect(entry.positionOfType('SUBJECT')?.current.shortName, 'G');
-    expect(entry.positionOfType('TEACHER')?.current.shortName, 'MusL');
+    expect(entry.positionOfType('SUBJECT')?.current?.shortName, 'G');
+    expect(entry.positionOfType('TEACHER')?.current?.shortName, 'MusL');
     expect(entry.isCancelled, isFalse);
     expect(entry.hasSubstitution, isFalse);
 
@@ -32,6 +32,11 @@ void main() {
         'days[0].gridEntries[0].moved',
         'days[0].gridEntries[0].durationTotal',
         'days[0].gridEntries[0].link',
+        // Server-computed layout suggestion, deliberately not modeled — GridEntryLayout
+        // computes its own layout client-side instead. See docs/api/spec/NOTES.md §4.
+        'days[0].gridEntries[0].layoutStartPosition',
+        'days[0].gridEntries[0].layoutWidth',
+        'days[0].gridEntries[0].layoutGroup',
       ]),
     );
   });
