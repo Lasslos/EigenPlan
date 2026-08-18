@@ -16,9 +16,9 @@ import 'package:your_schedule/core/rpc_request/rpc.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/settings/sentry_provider.dart';
 import 'package:your_schedule/settings/theme_provider.dart';
-import 'package:your_schedule/ui/screens/home_screen/home_screen.dart';
 import 'package:your_schedule/ui/screens/loading_screen/loading_error_screen.dart';
 import 'package:your_schedule/ui/screens/login_screen/welcome_screen.dart';
+import 'package:your_schedule/ui/screens/main_shell/main_shell.dart';
 import 'package:your_schedule/util/logger.dart';
 import 'package:your_schedule/util/shared_preferences.dart';
 import 'package:your_schedule/util/storage_migration.dart';
@@ -161,7 +161,7 @@ class _InitializerState extends ConsumerState<Initializer> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const HomeScreen(),
+          builder: (context) => const MainShell(),
         ),
       );
     }

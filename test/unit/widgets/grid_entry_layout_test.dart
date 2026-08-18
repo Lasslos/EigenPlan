@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:your_schedule/core/untis.dart';
-import 'package:your_schedule/ui/screens/home_screen/widgets/grid_entry_layout.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/widgets/grid_entry_layout.dart';
 
 GridEntry _entry(int startHour, int endHour) => GridEntry(
   duration: GridEntryDuration(

@@ -7,9 +7,9 @@ import 'package:your_schedule/core/provider/timetable_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/settings/view_mode_provider.dart';
-import 'package:your_schedule/ui/screens/home_screen/home_screen_date_provider.dart';
-import 'package:your_schedule/ui/screens/home_screen/widgets/grid_entry_layout.dart';
-import 'package:your_schedule/ui/screens/home_screen/widgets/time_indicator.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/timetable_screen_date_provider.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/widgets/grid_entry_layout.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/widgets/time_indicator.dart';
 import 'package:your_schedule/utils.dart';
 
 class DayView extends ConsumerStatefulWidget {
@@ -26,7 +26,7 @@ class _DayViewState extends ConsumerState<DayView> {
   @override
   void initState() {
     super.initState();
-    currentDate = ref.read(homeScreenDateProvider);
+    currentDate = ref.read(timetableScreenDateProvider);
     var index = _dateToIndex(currentDate);
     _pageController = PageController(initialPage: index);
   }
@@ -39,7 +39,7 @@ class _DayViewState extends ConsumerState<DayView> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<Date>(homeScreenDateProvider, (previous, next) {
+    ref.listen<Date>(timetableScreenDateProvider, (previous, next) {
       if (currentDate != next) {
         _pageController.animateToPage(
           _dateToIndex(next),
@@ -53,8 +53,8 @@ class _DayViewState extends ConsumerState<DayView> {
       controller: _pageController,
       onPageChanged: (index) {
         currentDate = _indexToDate(index);
-        if (currentDate != ref.read(homeScreenDateProvider)) {
-          ref.read(homeScreenDateProvider.notifier).date = currentDate;
+        if (currentDate != ref.read(timetableScreenDateProvider)) {
+          ref.read(timetableScreenDateProvider.notifier).date = currentDate;
         }
       },
       itemBuilder: (BuildContext context, int index) => _Page(index: index),

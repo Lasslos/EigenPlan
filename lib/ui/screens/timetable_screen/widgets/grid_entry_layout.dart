@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
-import 'package:your_schedule/ui/screens/home_screen/widgets/grid_entry_widget.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/widgets/grid_entry_widget.dart';
 
 /// Lays out a day's [GridEntry]s with a client-side overlap-packing algorithm, ported
 /// from the legacy (pre-`/timetable/entries`) `period_layout.dart`. The server also

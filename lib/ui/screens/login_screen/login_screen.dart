@@ -7,7 +7,7 @@ import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc_error.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
 import 'package:your_schedule/core/untis/untis_session.dart';
-import 'package:your_schedule/ui/screens/home_screen/home_screen.dart';
+import 'package:your_schedule/ui/screens/main_shell/main_shell.dart';
 import 'package:your_schedule/util/logger.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -293,7 +293,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
       Navigator.pushAndRemoveUntil(
         //ignore: use_build_context_synchronously
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const MainShell()),
         (route) => false,
       );
     } on RPCError catch (e) {
@@ -355,7 +355,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
       Navigator.pushAndRemoveUntil(
         //ignore: use_build_context_synchronously
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const MainShell()),
         (route) => false,
       );
     } on RPCError catch (e) {
