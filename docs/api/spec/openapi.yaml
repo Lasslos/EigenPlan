@@ -885,21 +885,31 @@ paths:
       tags: [calendar]
       summary: Get the full detail of one or more calendar entries (a period, exam, event, ...) by element + time range
       description: |
-        Used for the "tap a period to see detail" drill-down, and (with `elementType=5`/STUDENT observed) to
-        resolve homework/notes/attachments for a specific slot. `elementType` is an integer enum whose full
-        mapping is **UNKNOWN** — only `5` (student) was captured; `startDateTime`/`endDateTime` narrow to
-        exactly the slot(s) you already know about from the grid/entries response.
+        Used for the "tap a period to see detail" drill-down, and (with `elementType=5`/STUDENT confirmed) to
+        resolve homework/notes/attachments for a specific slot. `elementType`+`elementId` identify a
+        *resource* the same way `timetable/entries`'s `resourceType`+`resources` do — `elementId` is
+        `session.userData.id` (the logged-in resource's own id), **not** a period/grid-entry id — confirmed
+        via a 2026-08 live probe: querying with a `GridEntry.ids[]` value as `elementId` reliably returned
+        zero `calendarEntries`, while querying with `userData.id` for the same time window returned the
+        expected period(s). `startDateTime`/`endDateTime` narrow to exactly the slot(s) you already know
+        about from the grid/entries response; the response's `calendarEntries[].id` is what identifies each
+        returned period, not something you supply as input.
       parameters:
         - $ref: '#/components/parameters/school'
         - name: elementType
           in: query
           required: true
-          description: "Integer enum. `5` observed = STUDENT. Other values **UNKNOWN**."
+          description: |
+            Integer enum, resource-type-dependent (matches `session.userData.type`). Confirmed via 2026-08
+            live probe: `5` = STUDENT, `2` = TEACHER. `CLASS`/`ROOM`/`SUBJECT` values still **UNKNOWN** (no
+            CLASS-mode test account had timetable data in range to probe). `7`/`8` were tried and returned
+            HTTP 500 `INTERNAL_ERROR` — not valid values, not just "no data".
           schema: { type: integer }
           example: 5
         - name: elementId
           in: query
           required: true
+          description: "The resource's own id for the given `elementType` — e.g. `session.userData.id` when `elementType` matches `session.userData.type`. Not a period/grid-entry id."
           schema: { type: integer }
         - name: startDateTime
           in: query
@@ -933,9 +943,14 @@ paths:
       tags: [timetable]
       summary: Timetable "menu" (available resources/views for the current user)
       description: |
-        **UNKNOWN success shape** — every capture of this endpoint hit the `NO_TIMETABLES_AVAILABLE_FOR_YOUR_USER`
-        error path (anonymous bs-gfv account with no timetable access). Needs a follow-up capture against an
-        account that actually has timetable access to document the 200 response body.
+        Top-level success shape confirmed (2026-08 live probe): 200 with `{myTimetable, dependents,
+        availableTimetables}` was the **normal** response for every non-anonymous credentialed account
+        tested (`cjd-koewi` CLASS, `schuldorf` STUDENT, `wolfsburger-oberschule` TEACHER) — this is not a
+        rare case, it's what any account with real timetable access gets back. Only the anonymous `bs-gfv`
+        account (no timetable resource at all) hit the `NO_TIMETABLES_AVAILABLE_FOR_YOUR_USER` 404 path.
+        Nested shape confirmed (2026-08 live probe against `wolfsburger-oberschule`, see
+        `../captures/home/timetable_menu.md`) — see `TimetableMenuResponse` below. This is the first call
+        the app's "switch timetable" picker makes.
       security:
         - bearerAuth: []
         - anonymousSchoolHeader: []
@@ -943,10 +958,11 @@ paths:
         - $ref: '#/components/parameters/school'
       responses:
         '200':
-          description: "**UNKNOWN** — not captured; presumably a list of selectable resources (own class/student, or for teachers a searchable list of classes/teachers/rooms)."
+          description: OK
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/TimetableMenuResponse'
         '404':
           description: No timetable available for this user (observed as HTTP 404, not 200-with-error-field, unlike most other REST endpoints)
           content:
@@ -1078,6 +1094,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TimetableGrid'
+
+  /WebUntis/api/rest/view/v1/timetable/filter:
+    get:
+      tags: [timetable]
+      summary: Searchable directory of resources for a given resourceType — feeds the "switch timetable" picker's search UI
+      description: |
+        Not previously documented; live-probed 2026-08 against `wolfsburger-oberschule` (TEACHER account),
+        see `../captures/home/timetable_filter.md` for the full capture. Typically called after
+        `timetable/menu`, once per `resourceType` the user switches to/searches within (`menu`'s
+        `availableTimetables` lists which types are allowed). One unified response shape is returned
+        regardless of `resourceType` requested — only the array matching the requested type is populated.
+
+        `anonymousSchoolHeader` support confirmed live (2026-08 probe against `bs-gfv`) but **partial, not
+        blanket**: `resourceType=CLASS` gets a normal 200, `STUDENT`/`TEACHER`/`ROOM` get `403 Forbidden` on
+        the same anonymous session. See `../spec/NOTES.md` §2b/§4b.
+      security:
+        - bearerAuth: []
+        - anonymousSchoolHeader: []
+      parameters:
+        - $ref: '#/components/parameters/school'
+        - name: resourceType
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ResourceType'
+        - name: includePublicTimetables
+          in: query
+          required: false
+          description: "Sent as `true` on every observed request; effect **UNKNOWN** — not isolated against a request without it. May be what exposes resources beyond what the account could otherwise see (relevant to anonymous access, see NOTES.md §2b/§3)."
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableFilterResponse'
+
+  /WebUntis/api/rest/view/v1/schoolyears:
+    get:
+      tags: [timetable]
+      summary: List of the school's school years
+      description: |
+        Not previously documented; live-probed 2026-08 against `wolfsburger-oberschule` (TEACHER account),
+        see `../captures/home/schoolyears.md`. Distinct from the legacy `getUserData2017`'s
+        `masterData.schoolyears` (see `test/live/known_gaps.dart`) — field names match but the two haven't
+        been cross-checked for identical `id` numbering. Relationship to the timetable resource-picker flow
+        is **UNKNOWN** — nothing in `timetable/entries`'s confirmed params references a school-year id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/school'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SchoolYear'
 
 components:
   parameters:
@@ -1780,8 +1857,23 @@ components:
           properties:
             referencedStudents:
               type: array
-              items: {}
-              description: "**UNKNOWN** item shape — always empty in captures."
+              items:
+                type: object
+                description: |
+                  Confirmed populated (2026-08 live probe, `wolfsburger-oberschule` TEACHER account) — the
+                  roster of students covered by the requested `ttIds`, not "always empty" as previously
+                  documented from captures with no periods queried against a teacher account. **Contains
+                  real PII (`birthDate`, `medicalCertSince`)** — treat with the same care as any other
+                  student personal data if this is ever modeled/logged/displayed.
+                properties:
+                  id: { type: integer }
+                  firstName: { type: string }
+                  lastName: { type: string }
+                  klasseId: { type: integer }
+                  birthDate: { type: string, format: date }
+                  studentOfAge: { type: boolean }
+                  imageUrl: { type: string, nullable: true }
+                  medicalCertSince: { type: string, format: date, nullable: true }
             dataByTTId:
               type: object
               description: Map keyed by `ttId` (as a string).
@@ -1793,19 +1885,93 @@ components:
         ttId: { type: integer }
         absenceChecked: { type: boolean }
         studentIds: { type: array, nullable: true, items: { type: integer } }
-        absences: { type: array, nullable: true, items: {}, description: "**UNKNOWN** item shape." }
-        classRegEvents: { type: array, nullable: true, items: {}, description: "**UNKNOWN** item shape." }
-        exemptions: { type: array, nullable: true, items: {}, description: "**UNKNOWN** item shape." }
-        prioritizedAttendances: { type: array, nullable: true, items: {}, description: "**UNKNOWN** item shape." }
+        absences:
+          type: array
+          nullable: true
+          items:
+            type: object
+            description: |
+              Confirmed populated (2026-08 live probe, `wolfsburger-oberschule` TEACHER account) — real
+              student absence records for the period, not "always empty" as previously documented. Field
+              *types* below are best-effort from the observed key set (values themselves were never
+              inspected, per this repo's live-test privacy discipline — see `test/live/README.md`) and
+              should be re-verified before relying on them.
+            properties:
+              id: { type: integer }
+              studentId: { type: integer }
+              klasseId: { type: integer }
+              startDateTime: { type: string, format: date-time }
+              endDateTime: { type: string, format: date-time }
+              owner: { description: "UNKNOWN type — observed key only." }
+              excused: { description: "UNKNOWN type — observed key only." }
+              excuse: { description: "UNKNOWN type — observed key only." }
+              absenceReasonId: { type: integer, nullable: true }
+              absenceReason: { description: "UNKNOWN type — observed key only." }
+              text: { type: string, nullable: true }
+              manualNotificationStatus: { description: "UNKNOWN type — observed key only." }
+              autoNotificationStatus: { description: "UNKNOWN type — observed key only." }
+              studentOfAge: { type: boolean }
+        classRegEvents:
+          type: array
+          nullable: true
+          items:
+            type: object
+            description: "Confirmed populated (2026-08 live probe, `wolfsburger-oberschule` TEACHER account) — class-register events (e.g. a teacher's note against a specific student for a period)."
+            properties:
+              id: { type: integer }
+              elementType: { description: "UNKNOWN type — observed key only." }
+              elementId: { type: integer }
+              dateTime: { type: string, format: date-time }
+              text: { type: string, nullable: true }
+              eventReasonId: { type: integer, nullable: true }
+              write: { type: boolean, description: "Likely a permission flag, unconfirmed." }
+              delete: { type: boolean, description: "Likely a permission flag, unconfirmed." }
+        exemptions: { type: array, nullable: true, items: {}, description: "**UNKNOWN** item shape — still always empty as of the 2026-08 live probe." }
+        prioritizedAttendances:
+          type: array
+          nullable: true
+          items:
+            type: object
+            description: "Confirmed populated (2026-08 live probe, `wolfsburger-oberschule` TEACHER account) — attendance-priority entries per student for overlapping periods, not \"always empty\" as previously documented."
+            properties:
+              studentId: { type: integer }
+              activityType: { description: "UNKNOWN type — observed key only." }
+              periodId: { type: integer }
+              startDateTime: { type: string, format: date-time }
+              endDateTime: { type: string, format: date-time }
+              subjectId: { type: integer }
+              klassenIds: { type: array, items: { type: integer } }
+              roomIds: { type: array, items: { type: integer } }
+              teacherIds: { type: array, items: { type: integer } }
         text: { type: string, nullable: true }
         topic: { type: string, nullable: true }
         homeWorks:
           type: array
           items: { $ref: '#/components/schemas/HomeworkItem' }
-        seatingPlan: { nullable: true, description: "**UNKNOWN** shape." }
-        classRoles: { nullable: true, description: "**UNKNOWN** shape." }
+        seatingPlan: { nullable: true, description: "**UNKNOWN** shape — still always null as of the 2026-08 live probe." }
+        classRoles:
+          type: array
+          nullable: true
+          items:
+            type: object
+            description: "Confirmed populated (2026-08 live probe, `wolfsburger-oberschule` TEACHER account) — student duty-roster assignments for the period (see `Duty`/`duties` in master data), not \"always empty\" as previously documented."
+            properties:
+              studentId: { type: integer }
+              klasseId: { type: integer }
+              dutyId: { type: integer }
+              startDate: { type: string, format: date }
+              endDate: { type: string, format: date }
+              text: { type: string, nullable: true }
         can: { type: array, items: { type: string } }
-        studentAssignments: { nullable: true, description: "**UNKNOWN** shape." }
+        studentAssignments:
+          type: array
+          nullable: true
+          items:
+            type: object
+            description: "Confirmed populated (2026-08 live probe, `wolfsburger-oberschule` TEACHER account) — per-student seating/group assignment for the period, not \"always empty\" as previously documented."
+            properties:
+              studentId: { type: integer }
+              assignmentType: { description: "UNKNOWN type — observed key only." }
 
     RpcRequestGetHomeWork2017:
       type: object
@@ -2053,8 +2219,28 @@ components:
         isReplyForbidden: { type: boolean }
         replyHistory:
           type: array
-          items: {}
-          description: "**UNKNOWN** item shape — always empty in captures."
+          items:
+            type: object
+            description: |
+              Confirmed populated (2026-08 live probe, `wolfsburger-oberschule` TEACHER account, on a
+              message that had actually been replied to) — not "always empty" as previously documented from
+              accounts with no reply threads. Each item looks like a nested `MessageDetail`-shaped reply,
+              plus `recipients`/`isRevoked` which the top-level `MessageDetail` doesn't have. Nested field
+              *types* are inferred from the sibling top-level schemas, not independently re-verified.
+            properties:
+              id: { type: integer }
+              subject: { type: string }
+              content: { type: string, nullable: true }
+              sender: { $ref: '#/components/schemas/MessageSender' }
+              recipients:
+                type: array
+                items: { $ref: '#/components/schemas/MessageSender' }
+                description: "Confirmed same shape as `MessageSender` (2026-08 live probe) — previously documented as UNKNOWN item shape, observed key only."
+              sentDateTime: { type: string, format: date-time }
+              isRevoked: { type: boolean }
+              attachments: { type: array, items: { $ref: '#/components/schemas/ExternalAttachment' } }
+              blobAttachment: { nullable: true, description: "UNKNOWN shape — observed key only, same as the top-level MessageDetail field." }
+              storageAttachments: { type: array, items: { $ref: '#/components/schemas/StorageAttachment' } }
         requestConfirmation:
           nullable: true
           description: "**UNKNOWN** shape — always `null` in captures. Presumably relates to `MessagesPermissions.allowRequestReadConfirmation`."
@@ -2077,8 +2263,14 @@ components:
       properties:
         recipientOptions:
           type: array
-          items: {}
-          description: "**UNKNOWN** item shape — always empty in captures (none of the 4 accounts could compose messages)."
+          items: { type: string }
+          description: |
+            Confirmed populated (2026-08 live probe: 1 item for a STUDENT account, 4 for a TEACHER account)
+            — not "always empty" as previously documented from the original 4 capture accounts, none of
+            which could compose messages. Items are plain strings, presumably recipient-group identifiers
+            (e.g. "class", "teacher") given the field's purpose, but the exact strings observed weren't
+            recorded (see `test/live/README.md`'s content-privacy discipline) — re-capture with content
+            logging to confirm before relying on specific values.
         allowRequestReadConfirmation: { type: boolean }
         recipientSearchMaxResult: { type: integer }
         showDraftsTab: { type: boolean }
@@ -2115,8 +2307,23 @@ components:
         exam: { nullable: true, description: "**UNKNOWN** shape — always `null` in captures; presumably populated when `type: EXAM`." }
         homeworks:
           type: array
-          items: {}
-          description: "**UNKNOWN** item shape — always empty in captures; presumably shaped like `HomeworkItem`."
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              text: { type: string }
+              remark: { type: string, nullable: true }
+              completed: { type: boolean }
+              dateTime: { type: string, format: date-time }
+              dueDateTime: { type: string, format: date-time }
+              attachments: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in every observation so far." }
+          description: |
+            Confirmed populated (2026-08, live probe against a real STUDENT account with real homework
+            due) — was previously documented as always-empty from captures, which turned out to just
+            reflect test accounts with no homework outstanding at capture time, not an actual gap. Note
+            this item's field names (`dateTime`/`dueDateTime`) differ from `HomeworkItem`'s
+            (`startDate`/`endDate`) despite representing the same kind of record — do not assume they're
+            interchangeable shapes.
         klasses:
           type: array
           items: { $ref: '#/components/schemas/CalendarNamedRef' }
@@ -2136,7 +2343,17 @@ components:
         notesAllFiles: { type: array, items: {} }
         notesStaff: { type: string, nullable: true }
         notesStaffFiles: { type: array, items: {} }
-        originalCalendarEntry: { nullable: true, description: "**UNKNOWN** shape — presumably a nested `CalendarEntry` reference for moved/rescheduled periods." }
+        originalCalendarEntry:
+          nullable: true
+          type: object
+          description: |
+            Confirmed populated (2026-08 live probe, `schuldorf` STUDENT account, on a moved/rescheduled
+            period) — not "always null" as previously documented. Exactly the two fields below observed;
+            genuinely a smaller/different shape than a full nested `CalendarEntry`, not "presumably a
+            nested CalendarEntry reference" as previously guessed.
+          properties:
+            calculatedTitle: { type: string, description: "UNKNOWN further detail — observed key only." }
+            originalCalendarEntryId: { type: integer, description: "Presumably the pre-move CalendarEntry.id — not independently re-verified." }
         permissions:
           type: array
           items: { type: string }
@@ -2211,8 +2428,23 @@ components:
     # ---- timetable (new REST) ---------------------------------------------------------------------------------
     ResourceType:
       type: string
-      description: "Observed: `CLASS`, `STUDENT`, `TEACHER`. Presumably also `ROOM`/`SUBJECT` — **UNKNOWN**, unconfirmed against this server generation."
-      enum: [CLASS, STUDENT, TEACHER]
+      description: |
+        `CLASS`/`STUDENT`/`TEACHER`/`ROOM` all confirmed live (2026-08 probe, `wolfsburger-oberschule`) as
+        valid `timetable/filter` and `timetable/menu.availableTimetables` values — see
+        `../captures/home/timetable_filter.md`. `ROOM`'s validity specifically against `timetable/entries`
+        itself hasn't been separately re-confirmed this round (only `CLASS`/`TEACHER` were). `SUBJECT` is
+        presumed but still **UNKNOWN** — never observed as a valid resourceType anywhere, only as a value
+        of `GridEntry`'s inner `type` field.
+      enum: [CLASS, STUDENT, TEACHER, ROOM]
+
+    TimetableResource:
+      type: object
+      description: Common `{id, shortName, longName, displayName}` shape used for classes/teachers/rooms/students/subjects throughout the timetable REST API (`timetable/entries`, `timetable/menu`, `timetable/filter`).
+      properties:
+        id: { type: integer }
+        shortName: { type: string }
+        longName: { type: string }
+        displayName: { type: string, description: "Often an empty string in `timetable/entries`'s `TimetableDay.resource` — **UNKNOWN** when populated there. In `timetable/menu`/`timetable/filter` responses, semantics differ by resource type rather than being uniformly `== shortName`: confirmed live (2026-08, wolfsburger-oberschule) equal to `shortName` for a `TEACHER` entry (an abbreviation, e.g. `\"ML\"`), but for a `STUDENT` entry the *fullest* available name (`\"Merab Davituliani\"`) — fuller than `longName`, which was surname-only (`\"Davituliani\"`) for that same student. Prefer `displayName` over `longName` for `STUDENT`; not re-verified for `CLASS`/`ROOM`." }
     PeriodType:
       type: string
       description: "Full list as requested by the app's `timetable/entries` call (not all individually confirmed to ever be *returned* — only `NORMAL_TEACHING_PERIOD` and `EVENT` were observed in response data)."
@@ -2263,13 +2495,7 @@ components:
       properties:
         date: { type: string, format: date }
         resourceType: { $ref: '#/components/schemas/ResourceType' }
-        resource:
-          type: object
-          properties:
-            id: { type: integer }
-            shortName: { type: string }
-            longName: { type: string }
-            displayName: { type: string, description: "Observed always empty string — **UNKNOWN** when populated." }
+        resource: { $ref: '#/components/schemas/TimetableResource' }
         status:
           type: string
           description: "Observed: `REGULAR`, `NOT_ALLOWED` (e.g. querying dates outside the school's active school-year range)."
@@ -2283,8 +2509,11 @@ components:
       description: |
         One rendered timetable cell. `ids` groups together the underlying period-instance id(s) this cell
         represents (>1 when consecutive identical periods are merged into one visual block, e.g. a double
-        lesson) — these are the ids to pass into `getPeriodData2017`'s `ttIds` or `calendar-entry/detail`'s
-        `elementId`. `position1`..`position7` are independently-nullable *slots* the UI renders in order, and
+        lesson) — these are the ids to pass into `getPeriodData2017`'s `ttIds`. **Not** valid for
+        `calendar-entry/detail`'s `elementId` (confirmed via 2026-08 live probe) — that endpoint's
+        `elementId`/`elementType` identify a *resource* (e.g. `session.userData.id` + the resource's
+        `elementType`, same shape as `timetable/entries`'s `resources` param), not a period; you get period
+        ids back in the response, you don't look one up by its id. `position1`..`position7` are independently-nullable *slots* the UI renders in order, and
         the mapping is resource-type-dependent — confirmed via a live capture against a real `TEACHER`
         resource: `position1=CLASS`, `position2=SUBJECT` (or `INFO` for non-teaching entries like `EVENT`),
         `position3=ROOM` — the inverse of the `STUDENT`/`CLASS` resource ordering (`position1=TEACHER`,
@@ -2297,7 +2526,10 @@ components:
         e.g. one long-spanning entry pinned to a fixed-width column for its whole duration while shorter
         entries dynamically share the remaining width — full width when only one thing is happening at that
         moment, split evenly when two genuinely coincide. See `../captures/home/timetable_entries_overlap_example.md`
-        for the raw values. A client-side collision/layout algorithm is unnecessary — render this directly.
+        for the raw values. The app itself no longer models these three fields on `GridEntry`, though —
+        they assume every period the server knows about is being rendered, which breaks once the client can
+        hide individual courses (see NOTES.md §4); layout is computed client-side instead, over whatever's
+        actually visible.
       properties:
         ids: { type: array, items: { type: integer } }
         duration:
@@ -2342,7 +2574,10 @@ components:
     GridEntryPositionItem:
       type: object
       properties:
-        current: { $ref: '#/components/schemas/GridEntryPositionElement' }
+        current:
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/GridEntryPositionElement' }]
+          description: "Confirmed `null` live for a substitution that removes a position with nothing filling it back in — e.g. a lesson's teacher called in sick with no covering teacher assigned, so `position1` (TEACHER) has `current: null` and `removed` set to the original teacher, status `REMOVED`."
         removed:
           nullable: true
           allOf: [{ $ref: '#/components/schemas/GridEntryPositionElement' }]
@@ -2404,3 +2639,110 @@ components:
                 properties:
                   start: { type: string, pattern: '^\d{2}:\d{2}$' }
                   end: { type: string, pattern: '^\d{2}:\d{2}$' }
+
+    # ---- timetable/menu, timetable/filter, schoolyears (new REST, 2026-08 discovery) --------------------------
+    TimetableMenuResponse:
+      type: object
+      required: [myTimetable, dependents, availableTimetables]
+      properties:
+        myTimetable:
+          $ref: '#/components/schemas/TimetableMenuEntry'
+        dependents:
+          type: array
+          items: { $ref: '#/components/schemas/TimetableMenuEntry' }
+          description: "Empty for every account captured so far (none had dependents) — item shape presumed identical to `myTimetable`'s, unconfirmed."
+        availableTimetables:
+          type: array
+          items: { $ref: '#/components/schemas/ResourceType' }
+          description: "**Not** a list of specific resources — the `ResourceType`s this account is allowed to browse via `timetable/filter`. Confirmed narrower per account type (2026-08 probe, all four credentialed schools): TEACHER accounts get all four; a STUDENT account got `[CLASS, STUDENT]` only; a CLASS account got `[CLASS]` only."
+    TimetableMenuEntry:
+      type: object
+      properties:
+        type: { $ref: '#/components/schemas/ResourceType' }
+        resource: { $ref: '#/components/schemas/TimetableResource' }
+        imageUrl: { type: string, nullable: true, description: "`null` for every account observed so far — presumably a profile photo URL when set." }
+
+    TimetableFilterResponse:
+      type: object
+      description: |
+        One unified shape for every `resourceType` request — only the array(s) matching the requested type
+        are populated, the rest come back empty. See `../captures/home/timetable_filter.md`.
+      properties:
+        resourceType: { $ref: '#/components/schemas/ResourceType' }
+        preSelected:
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/TimetableResource' }]
+          description: "The resource that would be pre-highlighted for this resourceType — the caller's own resource where applicable (e.g. their own class for `CLASS`, own teacher entry for `TEACHER`), `null` where there's no obvious default (`STUDENT`, `ROOM`)."
+        buildings: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures." }
+        departments: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures; NOT the same as the per-class/-teacher `department` field below, which IS populated." }
+        roomGroups: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures." }
+        resourceTypes: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures; not to be confused with the `resourceType` field on this same object." }
+        assignmentGroups: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures at this level (a same-named field also appears per-student, also always empty)." }
+        resources: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures for every resourceType tried, including the ones that have their own dedicated array below (`classes`/`teachers`/`rooms`/`students`) — purpose unclear." }
+        subjects: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures. Presumably populated for a `resourceType=SUBJECT` request, which is itself unconfirmed as valid (see `ResourceType`)." }
+        classes:
+          type: array
+          description: Populated for `resourceType=CLASS` **and** `resourceType=STUDENT` (the full list of the school's classes either way).
+          items:
+            type: object
+            properties:
+              class: { $ref: '#/components/schemas/TimetableResource' }
+              classTeacher1: { nullable: true, allOf: [{ $ref: '#/components/schemas/TimetableResource' }] }
+              classTeacher2: { nullable: true, allOf: [{ $ref: '#/components/schemas/TimetableResource' }] }
+              department: { nullable: true, allOf: [{ $ref: '#/components/schemas/TimetableResource' }], description: "`null` observed live for some classes on the full class list — not every class has a department assigned." }
+        teachers:
+          type: array
+          description: Populated for `resourceType=TEACHER`.
+          items:
+            type: object
+            properties:
+              teacher: { $ref: '#/components/schemas/TimetableResource' }
+              departments:
+                type: array
+                items: { $ref: '#/components/schemas/TimetableResource' }
+              imageUrl: { type: string, nullable: true }
+        rooms:
+          type: array
+          description: Populated for `resourceType=ROOM`.
+          items:
+            type: object
+            properties:
+              room: { $ref: '#/components/schemas/TimetableResource' }
+              capacity: { type: integer, description: "`0` for every room observed — **UNKNOWN** whether that's a genuine unset-default or the field is simply never populated for this school." }
+              roomGroups: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures." }
+              building: { nullable: true, allOf: [{ $ref: '#/components/schemas/TimetableResource' }] }
+              department: { nullable: true, allOf: [{ $ref: '#/components/schemas/TimetableResource' }] }
+        students:
+          type: array
+          description: "Populated for `resourceType=STUDENT` — the school's **full** student directory, not scoped to the caller's own classes (several hundred entries for the one school probed). Contains real student PII (names)."
+          items:
+            type: object
+            properties:
+              student: { $ref: '#/components/schemas/TimetableResource' }
+              classes:
+                type: array
+                description: The student's own class-membership history (more than one entry if they changed classes mid-year).
+                items:
+                  type: object
+                  properties:
+                    class: { $ref: '#/components/schemas/TimetableResource' }
+                    dateRange:
+                      type: object
+                      properties:
+                        start: { type: string, format: date }
+                        end: { type: string, format: date }
+                    department: { nullable: true, allOf: [{ $ref: '#/components/schemas/TimetableResource' }] }
+              assignmentGroups: { type: array, items: {}, description: "**UNKNOWN** item shape — always empty in captures." }
+              imageUrl: { type: string, nullable: true, description: "`null` for every student observed so far." }
+
+    SchoolYear:
+      type: object
+      description: "See `../captures/home/schoolyears.md`. Field names match `getUserData2017`'s legacy `masterData.schoolyears` shape; `id` numbering cross-compatibility between the two is unconfirmed."
+      properties:
+        id: { type: integer }
+        name: { type: string, description: 'e.g. `"2026/2027"`.' }
+        dateRange:
+          type: object
+          properties:
+            start: { type: string, format: date }
+            end: { type: string, format: date }
