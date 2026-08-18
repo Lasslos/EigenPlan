@@ -19,6 +19,11 @@ abstract class Teacher with _$Teacher {
   factory Teacher.fromJson(Map<String, dynamic> json) =>
       _$TeacherFromJson(json);
 
-  String get longName =>
-      '${firstName.toLowerCase().capitalizeFirst()} ${lastName.toLowerCase().capitalizeFirst()}';
+  String get longName {
+    final capitalizedFirstName = firstName.toLowerCase().capitalizeFirst();
+    final capitalizedLastName = lastName.toLowerCase().capitalizeFirst();
+    return capitalizedFirstName.isEmpty
+        ? capitalizedLastName
+        : '$capitalizedFirstName $capitalizedLastName';
+  }
 }

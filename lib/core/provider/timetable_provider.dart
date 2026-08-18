@@ -8,14 +8,20 @@ part 'timetable_provider.g.dart';
 @riverpod
 class TimeTable extends _$TimeTable {
   @override
-  TimeTableWeek build(UntisSession session, Week week) {
+  TimeTableWeek build(
+    UntisSession session,
+    Week week,
+    TimetableResourceRef resource,
+  ) {
     assert(session is ActiveUntisSession, 'Session must be active');
     if (ref.watch(canMakeRequestProvider)) {
-      var timeTable = ref.watch(requestTimetableEntriesProvider(session, week));
+      var timeTable = ref.watch(
+        requestTimetableEntriesProvider(session, week, resource),
+      );
       if (timeTable.hasValue) {
         return timeTable.requireValue;
       }
     }
-    return ref.watch(cachedTimeTableProvider(session, week));
+    return ref.watch(cachedTimeTableProvider(session, week, resource));
   }
 }

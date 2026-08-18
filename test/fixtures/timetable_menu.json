@@ -1,0 +1,9 @@
+{
+  "myTimetable": {
+    "type": "TEACHER",
+    "resource": { "id": 134, "shortName": "ML", "longName": "Musterlehrer", "displayName": "ML" },
+    "imageUrl": null
+  },
+  "dependents": [],
+  "availableTimetables": ["CLASS", "STUDENT", "TEACHER", "ROOM"]
+}

@@ -28,10 +28,20 @@ const _periodTypes = [
 /// supersedes the legacy `getTimetable2017`, which is unreliable on the current
 /// server generation (see `docs/api/spec/NOTES.md` §4: confirmed to both silently
 /// return zero periods and NPE server-side for real accounts with real data).
+///
+/// [resource] selects *which* resource's timetable to fetch — pass
+/// [TimetableResourceRef.own] for the caller's own timetable (the only thing this
+/// ever requested before the "switch timetable" picker existed, see
+/// `docs/api/spec/NOTES.md` §4b) or a resource picked via `timetable/menu`/
+/// `timetable/filter` to view someone else's.
 @Riverpod(keepAlive: true)
 class RequestTimetableEntries extends _$RequestTimetableEntries {
   @override
-  Future<TimeTableWeek> build(UntisSession activeSession, Week week) async {
+  Future<TimeTableWeek> build(
+    UntisSession activeSession,
+    Week week,
+    TimetableResourceRef resource,
+  ) async {
     assert(activeSession is ActiveUntisSession, 'Session must be active!');
     ActiveUntisSession session = activeSession as ActiveUntisSession;
 
@@ -41,35 +51,39 @@ class RequestTimetableEntries extends _$RequestTimetableEntries {
       }
       data.when(
         data: (data) {
-          ref.read(cachedTimeTableProvider(session, week).notifier).setCachedTimeTable(data);
+          ref
+              .read(cachedTimeTableProvider(session, week, resource).notifier)
+              .setCachedTimeTable(data);
         },
         error: (error, stackTrace) {
-          logRequestError('Error while requesting timetable for $week', error, stackTrace);
+          logRequestError(
+            'Error while requesting timetable for $week',
+            error,
+            stackTrace,
+          );
         },
         loading: () {},
       );
     });
 
-    final resourceType = session.userData.type;
-    if (resourceType == null) {
-      // The legacy getTimetable2017 sent this straight through as `type: null` and let
-      // the server NPE on it — don't repeat that; fail clearly on the client instead.
-      throw StateError('Cannot request a timetable: userData.elemType is null for this session.');
-    }
+    final uri = Uri.https(
+      session.school.server,
+      '/WebUntis/api/rest/view/v1/timetable/entries',
+      {
+        'start': week.startDate.format(DateFormat('yyyy-MM-dd')),
+        'end': week.endDate.format(DateFormat('yyyy-MM-dd')),
+        'format': '1',
+        'resourceType': resource.resourceType,
+        'resources': resource.resourceId.toString(),
+        'periodTypes': _periodTypes.join(','),
+        'layout': 'PRIORITY',
+        'school': session.school.loginName,
+      },
+    );
 
-    final uri = Uri.https(session.school.server, '/WebUntis/api/rest/view/v1/timetable/entries', {
-      'start': week.startDate.format(DateFormat('yyyy-MM-dd')),
-      'end': week.endDate.format(DateFormat('yyyy-MM-dd')),
-      'format': '1',
-      'resourceType': resourceType,
-      'resources': session.userData.id.toString(),
-      'periodTypes': _periodTypes.join(','),
-      'layout': 'PRIORITY',
-      'school': session.school.loginName,
-    });
-
-    AuthToken? authToken =
-        session.loginMode == LoginMode.anonymous ? null : await ref.read(authTokenProvider(session).future);
+    AuthToken? authToken = session.loginMode == LoginMode.anonymous
+        ? null
+        : await ref.read(authTokenProvider(session).future);
 
     http.Response response;
     try {
@@ -78,7 +92,11 @@ class RequestTimetableEntries extends _$RequestTimetableEntries {
         headers: session.restAuthHeaders(authToken),
       );
     } catch (e, s) {
-      getLogger().e('Error while requesting timetable entries', error: e, stackTrace: s);
+      getLogger().e(
+        'Error while requesting timetable entries',
+        error: e,
+        stackTrace: s,
+      );
       rethrow;
     }
 
@@ -88,9 +106,7 @@ class RequestTimetableEntries extends _$RequestTimetableEntries {
         var entries = TimetableEntriesResponse.fromJson(
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
         );
-        return {
-          for (var day in entries.days) Date(day.date): day,
-        };
+        return {for (var day in entries.days) Date(day.date): day};
       case 404:
         // Not an exceptional failure — this is the documented "no timetable data for
         // this resource/date range" response (e.g. a school year that hasn't started
@@ -99,7 +115,9 @@ class RequestTimetableEntries extends _$RequestTimetableEntries {
         getLogger().i('No timetable entries for $week ($uri)');
         return {};
       default:
-        getLogger().e('HTTP Error: ${response.statusCode} ${response.reasonPhrase}');
+        getLogger().e(
+          'HTTP Error: ${response.statusCode} ${response.reasonPhrase}',
+        );
         throw HttpException(
           response.statusCode,
           response.reasonPhrase.toString(),
