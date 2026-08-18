@@ -10,7 +10,6 @@ import 'package:your_schedule/core/rpc_request/rpc_error.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
 import 'package:your_schedule/core/untis/requests/request_school_list.dart';
 import 'package:your_schedule/core/untis/untis_session.dart';
-import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
 import 'package:your_schedule/ui/screens/home_screen/home_screen.dart';
 import 'package:your_schedule/ui/screens/login_screen/widgets/qr_code_scanner.dart';
 import 'package:your_schedule/util/logger.dart';
@@ -181,11 +180,6 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
         (route) => false,
-      );
-      Navigator.push(
-        //ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(builder: (_) => const FilterScreen()),
       );
     } on RPCError catch (e) {
       if (e.code == RPCError.twoFactorRequired) {

@@ -14,7 +14,7 @@ export 'untis/models/messages/specified_message.dart';
 export 'untis/models/mobile_data/mobile_data.dart';
 export 'untis/models/school_search/school.dart';
 export 'untis/models/timetable/grid_entry.dart';
-export 'untis/models/timetable/grid_entry_resolution.dart';
+export 'untis/models/timetable/grid_entry_course_identity.dart';
 export 'untis/models/timetable/timetable_entries_response.dart';
 export 'untis/models/user_data/holiday.dart';
 export 'untis/models/user_data/klasse.dart';

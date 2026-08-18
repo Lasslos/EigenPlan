@@ -7,7 +7,6 @@ import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc_error.dart';
 import 'package:your_schedule/core/untis/models/school_search/school.dart';
 import 'package:your_schedule/core/untis/untis_session.dart';
-import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
 import 'package:your_schedule/ui/screens/home_screen/home_screen.dart';
 import 'package:your_schedule/util/logger.dart';
 
@@ -297,11 +296,6 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
         MaterialPageRoute(builder: (_) => const HomeScreen()),
         (route) => false,
       );
-      Navigator.push(
-        //ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(builder: (_) => const FilterScreen()),
-      );
     } on RPCError catch (e) {
       if (e.code == RPCError.twoFactorRequired) {
         setState(() {
@@ -363,11 +357,6 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
         (route) => false,
-      );
-      Navigator.push(
-        //ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(builder: (_) => const FilterScreen()),
       );
     } on RPCError catch (e) {
       setState(() {
