@@ -143,7 +143,7 @@ class GridEntryWidget extends ConsumerWidget {
                 style: TextStyle(fontSize: fontSize, color: textColor),
               ),
               maxLines: 1,
-              overflow: TextOverflow.visible,
+              overflow: TextOverflow.ellipsis,
             );
 
             return Column(
