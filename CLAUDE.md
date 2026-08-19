@@ -176,3 +176,4 @@ or reintroduce it without checking with the maintainer first.
   them along with `riverpod_lint`.
 - Generated files (`*.g.dart`, `*.freezed.dart`) are gitignored — treat their absence in a fresh checkout as normal
   and run `build_runner build` rather than assuming something is broken.
+- If there are unrelated changes on the same branch, please ask if I want to commit/switch the branch first.
