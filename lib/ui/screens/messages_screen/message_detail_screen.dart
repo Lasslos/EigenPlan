@@ -20,6 +20,10 @@ class MessageDetailScreen extends ConsumerWidget {
     final session =
     ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
     final message = ref.watch(messageDetailProvider(session, messageId));
+    final replyHistory = message == null
+        ? const <ReplyHistoryEntry>[]
+        : (List.of(message.replyHistory)
+          ..sort((a, b) => a.sentDateTime.compareTo(b.sentDateTime)));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nachricht')),
@@ -37,8 +41,10 @@ class MessageDetailScreen extends ConsumerWidget {
             const Divider(height: 24),
             // Earlier messages in the thread (e.g. the outgoing message this one
             // replies to) come first, oldest to newest, so the thread reads
-            // chronologically ending with the current message below.
-            for (var entry in message.replyHistory)
+            // chronologically ending with the current message below. The API's
+            // own replyHistory order isn't reliably chronological, so sort it
+            // explicitly rather than trusting it.
+            for (var entry in replyHistory)
               _ThreadEntry(
                 session: session,
                 sender: entry.sender.displayName,

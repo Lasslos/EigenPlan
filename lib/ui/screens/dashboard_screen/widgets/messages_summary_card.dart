@@ -57,6 +57,20 @@ class _MessageSummaryTile extends StatelessWidget {
 
   final IncomingMessage msg;
 
+  String _formattedDate(DateTime date) {
+    final now = DateTime.now();
+    final isToday =
+        date.year == now.year && date.month == now.month && date.day == now.day;
+    if (isToday) {
+      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    }
+    final isThisYear = date.year == now.year;
+    if (isThisYear) {
+      return '${date.day}.${date.month.toString().padLeft(2, '0')}.';
+    }
+    return '${date.day}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListTile(
@@ -73,6 +87,12 @@ class _MessageSummaryTile extends StatelessWidget {
         style: TextStyle(fontWeight: msg.isMessageRead ? FontWeight.normal : FontWeight.bold),
       ),
       subtitle: Text(msg.sender.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: Text(
+        _formattedDate(msg.sentDateTime),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => MessageDetailScreen(messageId: msg.id)),
