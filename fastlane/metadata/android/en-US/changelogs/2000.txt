@@ -1,0 +1,1 @@
+This release completes a full rewrite of the app's data layer: EigenPlan now speaks the Untis Mobile app's current API for login, timetable, homework, exams, and messages. Navigation also moves from a side drawer to a bottom tab bar with a new home dashboard.

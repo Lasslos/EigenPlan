@@ -24,5 +24,6 @@ extension TimeOfDayUtils on TimeOfDay {
     );
   }
 
-  String toHHMM() => '$hour:$minute';
+  String toHHMM() =>
+      '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 }

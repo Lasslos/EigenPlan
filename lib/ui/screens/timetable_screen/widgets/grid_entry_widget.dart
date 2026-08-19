@@ -31,6 +31,9 @@ GridEntryPositionItem? _teacherSlot(GridEntry entry) =>
 GridEntryPositionItem? _roomSlot(GridEntry entry) =>
     entry.positionOfType('ROOM');
 
+GridEntryPositionItem? _classSlot(GridEntry entry) =>
+    entry.positionOfType('CLASS');
+
 String _text(GridEntryPositionElement? element, {required bool short}) {
   if (element == null) {
     return '';
@@ -117,7 +120,7 @@ class GridEntryWidget extends ConsumerWidget {
               subjectText = entry.lessonText ?? '';
             }
             String teacherText = _text(teacherSlot?.current, short: useShort);
-            String roomText = _text(roomSlot?.current, short: useShort);
+            String roomText = _text(roomSlot?.current, short: true);
 
             String orgSubjectText = _text(subjectSlot?.removed, short: true);
             String orgTeacherText = _text(teacherSlot?.removed, short: true);
@@ -140,7 +143,7 @@ class GridEntryWidget extends ConsumerWidget {
                 style: TextStyle(fontSize: fontSize, color: textColor),
               ),
               maxLines: 1,
-              overflow: TextOverflow.visible,
+              overflow: TextOverflow.ellipsis,
             );
 
             return Column(
@@ -181,8 +184,11 @@ class GridEntryDetailsView extends ConsumerWidget {
         CustomSubjectColor.regularColor;
 
     var subjectSlot = _subjectSlot(entry);
-    var teacherSlot = _teacherSlot(entry);
+    // Unlike the compact card, there's room here to show `Klasse` as its own field, so
+    // `Lehrer` reads strictly from TEACHER — no falling back to CLASS and mislabeling it.
+    var teacherSlot = entry.positionOfType('TEACHER');
     var roomSlot = _roomSlot(entry);
+    var classSlot = _classSlot(entry);
 
     String headline = _text(subjectSlot?.current, short: false);
     if (headline.isEmpty) {
@@ -299,6 +305,35 @@ class GridEntryDetailsView extends ConsumerWidget {
               ),
             ),
           ),
+          if (classSlot != null)
+            ListTile(
+              leading: const Icon(Icons.groups_outlined),
+              title: const Text('Klasse'),
+              subtitle: Text.rich(
+                TextSpan(
+                  children: [
+                    if (classSlot.removed != null)
+                      TextSpan(
+                        text: _text(
+                          classSlot.removed,
+                          short: false,
+                        ).let((s) => s.isEmpty ? 'Keine Klasse' : s),
+                        style: TextStyle(
+                          color: Theme.of(context).disabledColor,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                    if (classSlot.removed != null) const TextSpan(text: ' '),
+                    TextSpan(
+                      text: _text(
+                        classSlot.current,
+                        short: false,
+                      ).let((s) => s.isEmpty ? 'Keine Klasse' : s),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ListTile(
             leading: const Icon(Icons.location_on_outlined),
             title: const Text('Raum'),
@@ -309,7 +344,7 @@ class GridEntryDetailsView extends ConsumerWidget {
                     TextSpan(
                       text: _text(
                         roomSlot!.removed,
-                        short: false,
+                        short: true,
                       ).let((s) => s.isEmpty ? 'Kein Raum' : s),
                       style: TextStyle(
                         color: Theme.of(context).disabledColor,
@@ -320,7 +355,7 @@ class GridEntryDetailsView extends ConsumerWidget {
                   TextSpan(
                     text: _text(
                       roomSlot?.current,
-                      short: false,
+                      short: true,
                     ).let((s) => s.isEmpty ? 'Kein Raum' : s),
                   ),
                 ],

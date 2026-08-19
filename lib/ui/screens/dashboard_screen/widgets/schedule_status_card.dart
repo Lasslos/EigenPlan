@@ -41,11 +41,15 @@ class ScheduleStatusCard extends ConsumerWidget {
     return TimedRefresh(
       interval: _refreshInterval,
       builder: (now, context) {
-        if (isWithinSchoolHours(timeGrid, now)) {
+        final today = lookupDay(Date.now(), thisWeek, nextWeek);
+        final status = isWithinSchoolHours(timeGrid, now) ? currentOrNextLesson(today, now, overrides) : null;
+
+        if (status != null) {
           return DashboardSummaryCard(
             title: 'Heute',
             child: _InSchoolContent(
-              today: lookupDay(Date.now(), thisWeek, nextWeek),
+              today: today,
+              status: status,
               overrides: overrides,
               now: now,
             ),
@@ -58,6 +62,7 @@ class ScheduleStatusCard extends ConsumerWidget {
           child: _NextDayOverviewContent(
             hasDay: nextDay != null,
             dayData: nextDayData,
+            overrides: overrides,
             lessons: visibleLessonsFor(nextDayData, overrides),
           ),
         );
@@ -84,27 +89,30 @@ String? _roomName(GridEntry entry) {
 class _InSchoolContent extends StatelessWidget {
   const _InSchoolContent({
     required this.today,
+    required this.status,
     required this.overrides,
     required this.now,
   });
 
   final TimetableDay? today;
+  final ({GridEntry entry, bool isCurrent}) status;
   final Map<String, bool> overrides;
   final DateTime now;
 
   @override
   Widget build(BuildContext context) {
-    final status = currentOrNextLesson(today, now);
     final irregularities = todaysIrregularities(today, overrides);
-    final bounds = schoolDayBounds(today);
+    final bounds = schoolDayBounds(today, overrides);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (status == null)
-          const Text('Für heute ist nichts mehr geplant.')
-        else
-          _LessonStatusTile(entry: status.entry, isCurrent: status.isCurrent, now: now),
+        _LessonStatusTile(
+          entry: status.entry,
+          isCurrent: status.isCurrent,
+          isLastPeriod: bounds != null && status.entry.duration.end.isAtSameMomentAs(bounds.end),
+          now: now,
+        ),
         if (bounds != null)
           Padding(
             padding: const EdgeInsets.only(left: 16, bottom: 4),
@@ -123,18 +131,24 @@ class _LessonStatusTile extends StatelessWidget {
   const _LessonStatusTile({
     required this.entry,
     required this.isCurrent,
+    required this.isLastPeriod,
     required this.now,
   });
 
   final GridEntry entry;
   final bool isCurrent;
+  final bool isLastPeriod;
   final DateTime now;
 
   @override
   Widget build(BuildContext context) {
     final remaining = isCurrent ? entry.duration.end.difference(now) : entry.duration.start.difference(now);
     final minutes = remaining.inMinutes.clamp(0, 999);
-    final countdown = isCurrent ? '$minutes Minuten bis zur Pause' : 'Beginnt in $minutes Minuten';
+    final countdown = !isCurrent
+        ? 'Beginnt in $minutes Minuten'
+        : isLastPeriod
+            ? '$minutes Minuten bis Schulende'
+            : '$minutes Minuten bis zur Pause';
     final room = _roomName(entry);
 
     return ListTile(
@@ -179,11 +193,13 @@ class _NextDayOverviewContent extends StatelessWidget {
   const _NextDayOverviewContent({
     required this.hasDay,
     required this.dayData,
+    required this.overrides,
     required this.lessons,
   });
 
   final bool hasDay;
   final TimetableDay? dayData;
+  final Map<String, bool> overrides;
   final List<GridEntry> lessons;
 
   @override
@@ -194,7 +210,7 @@ class _NextDayOverviewContent extends StatelessWidget {
     if (lessons.isEmpty) {
       return const Text('Keine Stundenplandaten verfügbar.');
     }
-    final bounds = schoolDayBounds(dayData);
+    final bounds = schoolDayBounds(dayData, overrides);
     final subjects = _distinctSubjects(lessons);
 
     return Column(

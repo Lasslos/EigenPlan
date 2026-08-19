@@ -75,18 +75,18 @@ void main() {
     ];
 
     test('null when today is null', () {
-      expect(currentOrNextLesson(null, day1), isNull);
+      expect(currentOrNextLesson(null, day1, const {}), isNull);
     });
 
     test('returns the lesson in progress as current', () {
-      final result = currentOrNextLesson(_day(day1, entries), DateTime(2026, 1, 5, 8, 30));
+      final result = currentOrNextLesson(_day(day1, entries), DateTime(2026, 1, 5, 8, 30), const {});
       expect(result?.isCurrent, isTrue);
       expect(result?.entry.positionOfType('SUBJECT')?.current?.shortName, 'Ma');
     });
 
     test('returns the next lesson during a gap', () {
       // 07:45 is before the first lesson — the "next" one is Ma.
-      final result = currentOrNextLesson(_day(day1, entries), DateTime(2026, 1, 5, 7, 45));
+      final result = currentOrNextLesson(_day(day1, entries), DateTime(2026, 1, 5, 7, 45), const {});
       expect(result?.isCurrent, isFalse);
       expect(result?.entry.positionOfType('SUBJECT')?.current?.shortName, 'Ma');
     });
@@ -96,13 +96,18 @@ void main() {
         _entry(start: DateTime(2026, 1, 5, 8), end: DateTime(2026, 1, 5, 9), status: 'CANCELLED', subjectShortName: 'Ma'),
         _entry(start: DateTime(2026, 1, 5, 9), end: DateTime(2026, 1, 5, 10), subjectShortName: 'De'),
       ];
-      final result = currentOrNextLesson(_day(day1, cancelled), DateTime(2026, 1, 5, 8, 30));
+      final result = currentOrNextLesson(_day(day1, cancelled), DateTime(2026, 1, 5, 8, 30), const {});
       expect(result?.entry.positionOfType('SUBJECT')?.current?.shortName, 'De');
     });
 
     test('null when nothing is left today', () {
-      final result = currentOrNextLesson(_day(day1, entries), DateTime(2026, 1, 5, 12));
+      final result = currentOrNextLesson(_day(day1, entries), DateTime(2026, 1, 5, 12), const {});
       expect(result, isNull);
+    });
+
+    test('filtered-out courses are skipped, like cancelled ones', () {
+      final result = currentOrNextLesson(_day(day1, entries), DateTime(2026, 1, 5, 8, 30), {'Ma|': false});
+      expect(result?.entry.positionOfType('SUBJECT')?.current?.shortName, 'De');
     });
   });
 
@@ -175,14 +180,14 @@ void main() {
     final day1 = DateTime(2026, 1, 5, 8);
 
     test('null for a null day', () {
-      expect(schoolDayBounds(null), isNull);
+      expect(schoolDayBounds(null, const {}), isNull);
     });
 
     test('null when every entry is cancelled', () {
       final entries = [
         _entry(start: DateTime(2026, 1, 5, 8), end: DateTime(2026, 1, 5, 9), status: 'CANCELLED', subjectShortName: 'Ma'),
       ];
-      expect(schoolDayBounds(_day(day1, entries)), isNull);
+      expect(schoolDayBounds(_day(day1, entries), const {}), isNull);
     });
 
     test('spans the earliest start to the latest end, ignoring cancelled entries', () {
@@ -194,9 +199,19 @@ void main() {
         _entry(start: DateTime(2026, 1, 5, 13), end: DateTime(2026, 1, 5, 14), status: 'CANCELLED', subjectShortName: 'Sport'),
         _entry(start: DateTime(2026, 1, 5, 12), end: DateTime(2026, 1, 5, 13), subjectShortName: 'Ku'),
       ];
-      final bounds = schoolDayBounds(_day(day1, entries));
+      final bounds = schoolDayBounds(_day(day1, entries), const {});
       expect(bounds?.start, DateTime(2026, 1, 5, 8));
       expect(bounds?.end, DateTime(2026, 1, 5, 13));
+    });
+
+    test('ignores filtered-out courses, like cancelled entries', () {
+      final entries = [
+        _entry(start: DateTime(2026, 1, 5, 7), end: DateTime(2026, 1, 5, 8), subjectShortName: 'Ma'),
+        _entry(start: DateTime(2026, 1, 5, 8), end: DateTime(2026, 1, 5, 9), subjectShortName: 'De'),
+      ];
+      final bounds = schoolDayBounds(_day(day1, entries), {'Ma|': false});
+      expect(bounds?.start, DateTime(2026, 1, 5, 8));
+      expect(bounds?.end, DateTime(2026, 1, 5, 9));
     });
   });
 
