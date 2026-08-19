@@ -1,0 +1,1 @@
+Diese Version bringt eine umfassende Überarbeitung der Datenschicht: EigenPlan spricht jetzt die aktuelle API der Untis-Mobile-App für Login, Stundenplan, Hausaufgaben, Prüfungen und Nachrichten. Außerdem wurde die Navigation von einem Seitenmenü auf eine Bottom-Navigationsleiste mit neuem Start-Dashboard umgestellt.
