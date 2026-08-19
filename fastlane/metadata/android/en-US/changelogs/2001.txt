@@ -1,0 +1,8 @@
+Bug fixes:
+- Fixed times sometimes showing without a leading zero (e.g. 9:5 instead of 09:05)
+- Fixed the Klasse field leaking into the Lehrer field in Stundendetails
+- Room short names are now shown consistently in the timetable card and Stundendetails
+- The home screen status card now respects course filters and lesson gaps
+- Message timestamps are now shown, and reply history is sorted chronologically
+- Long timetable entry text is now ellipsized instead of overflowing
+- Removed unused storage/media permissions the app never actually needed

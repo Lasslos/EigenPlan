@@ -63,3 +63,8 @@ Generate the nessessary code:
 ```shell
 dart run build_runner build
 ```
+
+### Release builds
+
+Release APKs (the ones published to GitHub Releases and mirrored by IzzyOnDroid) are built
+with [`tool/build_release_apk.sh`](tool/build_release_apk.sh).
