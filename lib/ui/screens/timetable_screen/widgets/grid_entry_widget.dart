@@ -120,7 +120,7 @@ class GridEntryWidget extends ConsumerWidget {
               subjectText = entry.lessonText ?? '';
             }
             String teacherText = _text(teacherSlot?.current, short: useShort);
-            String roomText = _text(roomSlot?.current, short: useShort);
+            String roomText = _text(roomSlot?.current, short: true);
 
             String orgSubjectText = _text(subjectSlot?.removed, short: true);
             String orgTeacherText = _text(teacherSlot?.removed, short: true);
@@ -344,7 +344,7 @@ class GridEntryDetailsView extends ConsumerWidget {
                     TextSpan(
                       text: _text(
                         roomSlot!.removed,
-                        short: false,
+                        short: true,
                       ).let((s) => s.isEmpty ? 'Kein Raum' : s),
                       style: TextStyle(
                         color: Theme.of(context).disabledColor,
@@ -355,7 +355,7 @@ class GridEntryDetailsView extends ConsumerWidget {
                   TextSpan(
                     text: _text(
                       roomSlot?.current,
-                      short: false,
+                      short: true,
                     ).let((s) => s.isEmpty ? 'Kein Raum' : s),
                   ),
                 ],
