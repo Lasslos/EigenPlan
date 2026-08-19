@@ -20,17 +20,30 @@ bool isWithinSchoolHours(List<TimeGridEntry> timeGrid, DateTime now) {
       time.difference(timeGrid.last.endTime) <= Duration.zero;
 }
 
+/// Whether [entry] should be shown at all, per the Filter screen's per-course
+/// visibility map — same `overrides[courseKey] ?? true` rule `week_view.dart`/
+/// `day_view.dart` use. Entries with no `courseKey` (e.g. standalone events) are
+/// always visible.
+bool _isVisible(GridEntry entry, Map<String, bool> overrides) {
+  final key = entry.courseKey;
+  return key == null || (overrides[key] ?? true);
+}
+
 /// The lesson currently in progress on [today], or — during a gap/break — the next one
 /// to start. `null` if there's nothing left today. Cancelled lessons never count as
-/// "current" or "next": there's nothing to arrive at.
+/// "current" or "next": there's nothing to arrive at. Hidden courses (per [overrides],
+/// the Filter screen's per-course visibility map) are skipped too — a filtered-out
+/// class shouldn't surface here even though it's still filtered from the timetable
+/// grid.
 ({GridEntry entry, bool isCurrent})? currentOrNextLesson(
   TimetableDay? today,
   DateTime now,
+  Map<String, bool> overrides,
 ) {
   if (today == null) {
     return null;
   }
-  final candidates = today.gridEntries.where((e) => !e.isCancelled).toList()
+  final candidates = today.gridEntries.where((e) => !e.isCancelled && _isVisible(e, overrides)).toList()
     ..sort((a, b) => a.duration.start.compareTo(b.duration.start));
 
   for (final entry in candidates) {
@@ -66,10 +79,7 @@ List<Irregularity> todaysIrregularities(
   if (today == null) {
     return [];
   }
-  final visible = today.gridEntries.where((e) {
-    final key = e.courseKey;
-    return key == null || (overrides[key] ?? true);
-  });
+  final visible = today.gridEntries.where((e) => _isVisible(e, overrides));
 
   final irregularities = <Irregularity>[
     for (final entry in visible)
@@ -114,15 +124,16 @@ Date? nextSchoolDay(
 /// start Saturday), and a dashboard showing "today" can equally need either.
 TimetableDay? lookupDay(Date day, TimeTableWeek week1, TimeTableWeek week2) => week1[day] ?? week2[day];
 
-/// When [day]'s school day actually starts/ends once cancellations are taken into
-/// account — the earliest start and latest end among its non-cancelled entries.
-/// `null` if [day] is unknown or has no non-cancelled entries at all (e.g. everything
-/// on it is cancelled, or it's genuinely empty).
-({DateTime start, DateTime end})? schoolDayBounds(TimetableDay? day) {
+/// When [day]'s school day actually starts/ends once cancellations and hidden courses
+/// (per [overrides], the Filter screen's per-course visibility map) are taken into
+/// account — the earliest start and latest end among its non-cancelled, visible
+/// entries. `null` if [day] is unknown or has no such entries at all (e.g. everything
+/// on it is cancelled/hidden, or it's genuinely empty).
+({DateTime start, DateTime end})? schoolDayBounds(TimetableDay? day, Map<String, bool> overrides) {
   if (day == null) {
     return null;
   }
-  final active = day.gridEntries.where((e) => !e.isCancelled);
+  final active = day.gridEntries.where((e) => !e.isCancelled && _isVisible(e, overrides));
   if (active.isEmpty) {
     return null;
   }
@@ -147,10 +158,7 @@ List<GridEntry> visibleLessonsFor(TimetableDay? day, Map<String, bool> overrides
   if (day == null || day.status != 'REGULAR') {
     return [];
   }
-  final visible = day.gridEntries.where((e) {
-    final key = e.courseKey;
-    return key == null || (overrides[key] ?? true);
-  }).toList()
+  final visible = day.gridEntries.where((e) => _isVisible(e, overrides)).toList()
     ..sort((a, b) => a.duration.start.compareTo(b.duration.start));
   return visible;
 }
