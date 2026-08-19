@@ -1,0 +1,8 @@
+Fehlerbehebungen:
+- Uhrzeiten wurden teilweise ohne führende Null angezeigt (z. B. 9:5 statt 09:05)
+- Das Klasse-Feld tauchte fälschlicherweise im Lehrer-Feld der Stundendetails auf
+- Der Kurzname des Raums wird jetzt einheitlich in der Stundenplankarte und den Stundendetails angezeigt
+- Die Statuskarte auf dem Startbildschirm berücksichtigt jetzt Kursfilter und Lücken im Stundenplan
+- Nachrichten zeigen jetzt Zeitstempel an, der Antwortverlauf ist chronologisch sortiert
+- Zu langer Text in Stundenplaneinträgen wird jetzt abgeschnitten statt überzulaufen
+- Nicht benötigte Speicher-/Medienberechtigungen wurden entfernt
