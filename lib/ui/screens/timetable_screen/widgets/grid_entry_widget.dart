@@ -9,6 +9,7 @@ import 'package:your_schedule/core/provider/selected_timetable_resource_provider
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/custom_subject_color/custom_subject_color.dart';
+import 'package:your_schedule/settings/view_mode_provider.dart';
 import 'package:your_schedule/util/logger.dart';
 
 const _statusDisplayNames = {
@@ -24,15 +25,19 @@ GridEntryPositionItem? _subjectSlot(GridEntry entry) =>
 
 /// The secondary text — `TEACHER` normally, falling back to `CLASS` for a
 /// `resourceType: TEACHER` timetable, where there usually isn't a second teacher to
-/// show but the class being taught is exactly what you want to see instead.
-GridEntryPositionItem? _teacherSlot(GridEntry entry) =>
-    entry.positionOfType('TEACHER') ?? entry.positionOfType('CLASS');
+/// show but the class(es) being taught is exactly what you want to see instead. A
+/// lesson can carry more than one of either (e.g. co-teachers, or a whole-school event
+/// assigned to many classes), hence the list.
+List<GridEntryPositionItem> _teacherOrClassItems(GridEntry entry) {
+  var teachers = entry.allPositionsOfType('TEACHER');
+  return teachers.isNotEmpty ? teachers : entry.allPositionsOfType('CLASS');
+}
 
-GridEntryPositionItem? _roomSlot(GridEntry entry) =>
-    entry.positionOfType('ROOM');
+List<GridEntryPositionItem> _roomItems(GridEntry entry) =>
+    entry.allPositionsOfType('ROOM');
 
-GridEntryPositionItem? _classSlot(GridEntry entry) =>
-    entry.positionOfType('CLASS');
+List<GridEntryPositionItem> _classItems(GridEntry entry) =>
+    entry.allPositionsOfType('CLASS');
 
 String _text(GridEntryPositionElement? element, {required bool short}) {
   if (element == null) {
@@ -41,6 +46,105 @@ String _text(GridEntryPositionElement? element, {required bool short}) {
   return (short ? element.shortName : element.longName) ??
       element.displayName ??
       '';
+}
+
+/// Joins every item's [GridEntryPositionItem.current] text into one comma-separated
+/// string — plural because a slot can hold more than one value (see
+/// [_teacherOrClassItems]).
+String _joinCurrent(List<GridEntryPositionItem> items, {required bool short}) => items
+    .map((item) => _text(item.current, short: short))
+    .where((text) => text.isNotEmpty)
+    .join(', ');
+
+/// Same as [_joinCurrent] but for [GridEntryPositionItem.removed] (the pre-substitution
+/// value).
+String _joinRemoved(List<GridEntryPositionItem> items, {required bool short}) => items
+    .map((item) => _text(item.removed, short: short))
+    .where((text) => text.isNotEmpty)
+    .join(', ');
+
+/// Renders every one of [items] joined onto one comma-separated line (struck-through
+/// removed values, then current values) for the details screen. Falls back to
+/// [emptyPlaceholder] when [items] is empty or every current value is itself empty
+/// (e.g. a teacher pulled with no substitute). Ellipsizes rather than growing
+/// unbounded when there are many entries — tapping a truncated line expands it in
+/// place instead of losing the rest of the list.
+class _PositionListText extends StatefulWidget {
+  const _PositionListText({
+    required this.items,
+    required this.short,
+    required this.emptyPlaceholder,
+  });
+
+  final List<GridEntryPositionItem> items;
+  final bool short;
+  final String emptyPlaceholder;
+
+  static const _collapsedMaxLines = 3;
+
+  @override
+  State<_PositionListText> createState() => _PositionListTextState();
+}
+
+class _PositionListTextState extends State<_PositionListText> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.items.isEmpty) {
+      return Text(widget.emptyPlaceholder);
+    }
+
+    String removedText = _joinRemoved(widget.items, short: widget.short);
+    String currentText = _joinCurrent(
+      widget.items,
+      short: widget.short,
+    ).let((s) => s.isEmpty ? widget.emptyPlaceholder : s);
+
+    TextSpan span = TextSpan(
+      style: DefaultTextStyle.of(context).style,
+      children: [
+        if (removedText.isNotEmpty)
+          TextSpan(
+            text: removedText,
+            style: TextStyle(
+              color: Theme.of(context).disabledColor,
+              decoration: TextDecoration.lineThrough,
+            ),
+          ),
+        if (removedText.isNotEmpty) const TextSpan(text: ' '),
+        TextSpan(text: currentText),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isTruncated =
+            !_expanded &&
+            (TextPainter(
+                  text: span,
+                  maxLines: _PositionListText._collapsedMaxLines,
+                  textDirection: Directionality.of(context),
+                )..layout(maxWidth: constraints.maxWidth))
+                .didExceedMaxLines;
+
+        Widget text = Text.rich(
+          span,
+          maxLines: _expanded ? null : _PositionListText._collapsedMaxLines,
+          overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+        );
+
+        if (!isTruncated && !_expanded) {
+          return text;
+        }
+
+        return GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: text,
+        );
+      },
+    );
+  }
 }
 
 class GridEntryWidget extends ConsumerWidget {
@@ -75,9 +179,10 @@ class GridEntryWidget extends ConsumerWidget {
       statusColor = CustomSubjectColor.emptyColor;
     }
 
+    var viewMode = ref.watch(viewModeSettingProvider);
     var subjectSlot = _subjectSlot(entry);
-    var teacherSlot = _teacherSlot(entry);
-    var roomSlot = _roomSlot(entry);
+    var teacherItems = _teacherOrClassItems(entry);
+    var roomItems = _roomItems(entry);
 
     Color textColor = entry.isCancelled
         ? Theme.of(context).textTheme.bodyLarge!.color!
@@ -109,22 +214,31 @@ class GridEntryWidget extends ConsumerWidget {
         },
         child: LayoutBuilder(
           builder: (context, constraints) {
-            bool useShort =
-                constraints.maxWidth < 100 ||
-                subjectSlot?.removed != null ||
-                teacherSlot?.removed != null ||
-                roomSlot?.removed != null;
+            bool hasSpace = constraints.maxWidth >= 100;
 
-            String subjectText = _text(subjectSlot?.current, short: useShort);
+            // Long names only when in day view with room to spare and few enough
+            // entries to fit; a substitution on that line always forces short (need
+            // room for old + new side by side).
+            bool wantsLong(List<GridEntryPositionItem> items) =>
+                viewMode == ViewMode.day &&
+                hasSpace &&
+                items.length <= 2 &&
+                items.every((item) => item.removed == null);
+
+            var subjectItems = subjectSlot == null ? <GridEntryPositionItem>[] : [subjectSlot];
+            bool subjectLong = wantsLong(subjectItems);
+            bool teacherLong = wantsLong(teacherItems);
+
+            String subjectText = _joinCurrent(subjectItems, short: !subjectLong);
             if (subjectText.isEmpty) {
               subjectText = entry.lessonText ?? '';
             }
-            String teacherText = _text(teacherSlot?.current, short: useShort);
-            String roomText = _text(roomSlot?.current, short: true);
+            String teacherText = _joinCurrent(teacherItems, short: !teacherLong);
+            String roomText = _joinCurrent(roomItems, short: true);
 
-            String orgSubjectText = _text(subjectSlot?.removed, short: true);
-            String orgTeacherText = _text(teacherSlot?.removed, short: true);
-            String orgRoomText = _text(roomSlot?.removed, short: true);
+            String orgSubjectText = _joinRemoved(subjectItems, short: true);
+            String orgTeacherText = _joinRemoved(teacherItems, short: true);
+            String orgRoomText = _joinRemoved(roomItems, short: true);
 
             Widget lineOf(String orgText, String text) => RichText(
               text: TextSpan(
@@ -186,9 +300,9 @@ class GridEntryDetailsView extends ConsumerWidget {
     var subjectSlot = _subjectSlot(entry);
     // Unlike the compact card, there's room here to show `Klasse` as its own field, so
     // `Lehrer` reads strictly from TEACHER — no falling back to CLASS and mislabeling it.
-    var teacherSlot = entry.positionOfType('TEACHER');
-    var roomSlot = _roomSlot(entry);
-    var classSlot = _classSlot(entry);
+    var teacherItems = entry.allPositionsOfType('TEACHER');
+    var roomItems = _roomItems(entry);
+    var classItems = _classItems(entry);
 
     String headline = _text(subjectSlot?.current, short: false);
     if (headline.isEmpty) {
@@ -280,86 +394,29 @@ class GridEntryDetailsView extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: const Text('Lehrer'),
-            subtitle: Text.rich(
-              TextSpan(
-                children: [
-                  if (teacherSlot?.removed != null)
-                    TextSpan(
-                      text: _text(
-                        teacherSlot!.removed,
-                        short: false,
-                      ).let((s) => s.isEmpty ? 'Kein Lehrer' : s),
-                      style: TextStyle(
-                        color: Theme.of(context).disabledColor,
-                        decoration: TextDecoration.lineThrough,
-                      ),
-                    ),
-                  if (teacherSlot?.removed != null) const TextSpan(text: ' '),
-                  TextSpan(
-                    text: _text(
-                      teacherSlot?.current,
-                      short: false,
-                    ).let((s) => s.isEmpty ? 'Kein Lehrer' : s),
-                  ),
-                ],
-              ),
+            subtitle: _PositionListText(
+              items: teacherItems,
+              short: false,
+              emptyPlaceholder: 'Kein Lehrer',
             ),
           ),
-          if (classSlot != null)
+          if (classItems.isNotEmpty)
             ListTile(
               leading: const Icon(Icons.groups_outlined),
               title: const Text('Klasse'),
-              subtitle: Text.rich(
-                TextSpan(
-                  children: [
-                    if (classSlot.removed != null)
-                      TextSpan(
-                        text: _text(
-                          classSlot.removed,
-                          short: false,
-                        ).let((s) => s.isEmpty ? 'Keine Klasse' : s),
-                        style: TextStyle(
-                          color: Theme.of(context).disabledColor,
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
-                    if (classSlot.removed != null) const TextSpan(text: ' '),
-                    TextSpan(
-                      text: _text(
-                        classSlot.current,
-                        short: false,
-                      ).let((s) => s.isEmpty ? 'Keine Klasse' : s),
-                    ),
-                  ],
-                ),
+              subtitle: _PositionListText(
+                items: classItems,
+                short: false,
+                emptyPlaceholder: 'Keine Klasse',
               ),
             ),
           ListTile(
             leading: const Icon(Icons.location_on_outlined),
             title: const Text('Raum'),
-            subtitle: Text.rich(
-              TextSpan(
-                children: [
-                  if (roomSlot?.removed != null)
-                    TextSpan(
-                      text: _text(
-                        roomSlot!.removed,
-                        short: true,
-                      ).let((s) => s.isEmpty ? 'Kein Raum' : s),
-                      style: TextStyle(
-                        color: Theme.of(context).disabledColor,
-                        decoration: TextDecoration.lineThrough,
-                      ),
-                    ),
-                  if (roomSlot?.removed != null) const TextSpan(text: ' '),
-                  TextSpan(
-                    text: _text(
-                      roomSlot?.current,
-                      short: true,
-                    ).let((s) => s.isEmpty ? 'Kein Raum' : s),
-                  ),
-                ],
-              ),
+            subtitle: _PositionListText(
+              items: roomItems,
+              short: true,
+              emptyPlaceholder: 'Kein Raum',
             ),
           ),
           ListTile(
