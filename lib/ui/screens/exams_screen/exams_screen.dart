@@ -4,6 +4,8 @@ import 'package:intl/intl.dart' as intl;
 import 'package:your_schedule/core/provider/exams_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
+import 'package:your_schedule/ui/shared/course_chip.dart';
+import 'package:your_schedule/util/date.dart';
 import 'package:your_schedule/util/week.dart';
 
 const _initialWeeksShown = 6;
@@ -73,10 +75,15 @@ class _ExamsScreenState extends ConsumerState<ExamsScreen> {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                           child: Text(
-                            intl.DateFormat('EEEE, dd. MMMM', 'de').format(exam.startDateTime),
+                            relativeDayLabel(
+                              Date(exam.startDateTime).differenceInDays(Date.now()),
+                              exam.startDateTime,
+                            ),
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
-                        ),
+                        )
+                      else
+                        const Divider(height: 1, indent: 16),
                       _ExamTile(exam: exam, userData: session.userData),
                     ],
                   );
@@ -97,15 +104,20 @@ class _ExamTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final subject = userData.subjects[exam.subjectId];
     final rooms = exam.roomIds.map((id) => userData.rooms[id]?.name ?? '?').join(', ');
     final teachers = exam.teacherIds.map((id) => userData.teachers[id]?.shortName ?? '?').join(', ');
     final timeRange =
         '${intl.DateFormat('HH:mm').format(exam.startDateTime)}–${intl.DateFormat('HH:mm').format(exam.endDateTime)}';
+    final keys = exam.courseKeys(userData);
 
     return ListTile(
-      leading: const Icon(Icons.assignment_outlined),
-      title: Text(subject?.name ?? exam.name),
+      title: CourseChip(
+        label: subject?.name ?? exam.name,
+        courseKey: keys.isEmpty ? null : keys.first,
+        style: theme.textTheme.titleSmall,
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -116,7 +128,7 @@ class _ExamTile extends StatelessWidget {
               if (rooms.isNotEmpty) rooms,
               if (teachers.isNotEmpty) teachers,
             ].join(' · '),
-            style: Theme.of(context).textTheme.bodySmall,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),

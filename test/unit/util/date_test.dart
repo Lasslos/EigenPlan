@@ -32,4 +32,28 @@ void main() {
     expect(end.differenceInDays(start), 9);
     expect(start.differenceInDays(end), -9);
   });
+
+  group('relativeDayLabel', () {
+    final date = DateTime(2026, 1, 12);
+
+    test('today, tomorrow and yesterday get dedicated words', () {
+      expect(relativeDayLabel(0, date), 'Heute');
+      expect(relativeDayLabel(1, date), 'Morgen');
+      expect(relativeDayLabel(-1, date), 'Gestern');
+    });
+
+    test('within a week, further future/past days count in Tagen', () {
+      expect(relativeDayLabel(2, date), 'In 2 Tagen');
+      expect(relativeDayLabel(7, date), 'In 7 Tagen');
+      expect(relativeDayLabel(-2, date), 'Vor 2 Tagen');
+      expect(relativeDayLabel(-7, date), 'Vor 7 Tagen');
+    });
+
+    test('beyond a week either way, falls back to the absolute date', () {
+      expect(relativeDayLabel(8, date), '12.01.2026');
+      expect(relativeDayLabel(42, date), '12.01.2026');
+      expect(relativeDayLabel(-8, date), '12.01.2026');
+      expect(relativeDayLabel(-42, date), '12.01.2026');
+    });
+  });
 }

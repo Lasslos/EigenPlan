@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:your_schedule/core/provider/homework_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
+import 'package:your_schedule/ui/shared/course_chip.dart';
 import 'package:your_schedule/util/date.dart';
 import 'package:your_schedule/util/homework_grouping.dart';
 
@@ -26,7 +27,12 @@ class _HomeworkScreenState extends ConsumerState<HomeworkScreen> {
     Widget tileFor(HomeworkItem item) {
       final lesson = homework.lessonsById[item.lessonId];
       final subject = lesson != null ? session.userData.subjects[lesson.subjectId] : null;
-      return _HomeworkTile(subjectName: subject?.name ?? 'Unbekanntes Fach', item: item);
+      final keys = lesson?.courseKeys(session.userData) ?? const <String>{};
+      return _HomeworkTile(
+        subjectName: subject?.name ?? 'Unbekanntes Fach',
+        courseKey: keys.isEmpty ? null : keys.first,
+        item: item,
+      );
     }
 
     void addGroup(List<Widget> target, List<HomeworkItem> items) {
@@ -108,9 +114,10 @@ class _OlderHomeworkToggle extends StatelessWidget {
 }
 
 class _HomeworkTile extends StatelessWidget {
-  const _HomeworkTile({required this.subjectName, required this.item});
+  const _HomeworkTile({required this.subjectName, required this.courseKey, required this.item});
 
   final String subjectName;
+  final String? courseKey;
   final HomeworkItem item;
 
   @override
@@ -131,8 +138,9 @@ class _HomeworkTile extends StatelessWidget {
         item.completed ? Icons.check_circle : Icons.radio_button_unchecked,
         color: item.completed ? colorScheme.primary : colorScheme.onSurfaceVariant,
       ),
-      title: Text(
-        subjectName,
+      title: CourseChip(
+        label: subjectName,
+        courseKey: courseKey,
         style: theme.textTheme.titleSmall,
       ),
       subtitle: Column(
@@ -150,9 +158,7 @@ class _HomeworkTile extends StatelessWidget {
               style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
             ),
           Text(
-            !item.completed && daysUntilDue < 0
-                ? 'Überfällig seit ${item.endDate.day}.${item.endDate.month}.${item.endDate.year}'
-                : 'Fällig am ${item.endDate.day}.${item.endDate.month}.${item.endDate.year}',
+            relativeDayLabel(daysUntilDue, item.endDate),
             style: theme.textTheme.labelSmall?.copyWith(color: dueDateColor),
           ),
         ],

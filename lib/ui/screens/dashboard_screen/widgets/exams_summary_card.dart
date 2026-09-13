@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart' as intl;
 import 'package:your_schedule/core/provider/exams_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/screens/dashboard_screen/widgets/dashboard_summary_card.dart';
 import 'package:your_schedule/ui/screens/exams_screen/exams_screen.dart';
+import 'package:your_schedule/ui/shared/course_chip.dart';
 import 'package:your_schedule/util/date.dart';
 import 'package:your_schedule/util/week.dart';
 
@@ -73,13 +73,23 @@ class _ExamSummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subject = userData.subjects[exam.subjectId];
-    final dateLabel = intl.DateFormat('EEE, dd.MM.', 'de').format(exam.startDateTime);
+    final daysUntilDue = Date(exam.startDateTime).differenceInDays(Date.now());
+    final dueLabel = relativeDayLabel(daysUntilDue, exam.startDateTime);
+    final dueDateColor = daysUntilDue <= 2 ? Colors.orange : null;
+    final keys = exam.courseKeys(userData);
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.edit_calendar_outlined, size: 20),
-      title: Text(subject?.name ?? exam.name),
-      subtitle: Text(dateLabel),
+      title: CourseChip(label: subject?.name ?? exam.name, courseKey: keys.isEmpty ? null : keys.first),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(exam.text.isNotEmpty ? exam.text : exam.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(dueLabel, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: dueDateColor)),
+        ],
+      ),
+      isThreeLine: true,
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ExamsScreen()),

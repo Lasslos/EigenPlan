@@ -5,6 +5,7 @@ import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/screens/dashboard_screen/widgets/dashboard_summary_card.dart';
 import 'package:your_schedule/ui/screens/homework_screen/homework_screen.dart';
+import 'package:your_schedule/ui/shared/course_chip.dart';
 import 'package:your_schedule/util/date.dart';
 import 'package:your_schedule/util/homework_grouping.dart';
 
@@ -52,6 +53,7 @@ class HomeworkSummaryCard extends ConsumerWidget {
                 for (final item in displayed)
                   _HomeworkSummaryTile(
                     subjectName: _subjectName(homework, session, item),
+                    courseKey: _courseKey(homework, session, item),
                     item: item,
                   ),
                 if (remaining > 0) _RemainingLabel(remaining),
@@ -67,26 +69,37 @@ String _subjectName(Homework homework, ActiveUntisSession session, HomeworkItem 
   return subject?.name ?? 'Unbekanntes Fach';
 }
 
+String? _courseKey(Homework homework, ActiveUntisSession session, HomeworkItem item) {
+  final lesson = homework.lessonsById[item.lessonId];
+  final keys = lesson?.courseKeys(session.userData) ?? const <String>{};
+  return keys.isEmpty ? null : keys.first;
+}
+
 class _HomeworkSummaryTile extends StatelessWidget {
-  const _HomeworkSummaryTile({required this.subjectName, required this.item});
+  const _HomeworkSummaryTile({required this.subjectName, required this.courseKey, required this.item});
 
   final String subjectName;
+  final String? courseKey;
   final HomeworkItem item;
 
   @override
   Widget build(BuildContext context) {
     final daysUntilDue = Date(item.endDate).differenceInDays(Date.now());
-    final dueLabel = switch (daysUntilDue) {
-      0 => 'Heute fällig',
-      _ => 'In $daysUntilDue Tagen',
-    };
+    final dueLabel = relativeDayLabel(daysUntilDue, item.endDate);
+    final dueDateColor = daysUntilDue <= 2 ? Colors.orange : null;
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.assignment_outlined, size: 20),
-      title: Text(subjectName),
-      subtitle: Text(item.text, maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: Text(dueLabel, style: Theme.of(context).textTheme.labelSmall),
+      title: CourseChip(label: subjectName, courseKey: courseKey),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(item.text, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(dueLabel, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: dueDateColor)),
+        ],
+      ),
+      isThreeLine: true,
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const HomeworkScreen()),
