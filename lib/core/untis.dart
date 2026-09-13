@@ -13,6 +13,7 @@ export 'untis/models/dashboard/message_of_day.dart';
 export 'untis/models/exams/exam.dart';
 export 'untis/models/exams/invigilators.dart';
 export 'untis/models/homework/homework.dart';
+export 'untis/models/homework/homework_course_identity.dart';
 export 'untis/models/login_meta/login_meta.dart';
 export 'untis/models/messages/attachment_storage_url.dart';
 export 'untis/models/messages/message_attachment.dart';

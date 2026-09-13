@@ -4,16 +4,72 @@ import 'package:your_schedule/core/provider/homework_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/util/date.dart';
+import 'package:your_schedule/util/homework_grouping.dart';
 
-class HomeworkScreen extends ConsumerWidget {
+class HomeworkScreen extends ConsumerStatefulWidget {
   const HomeworkScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeworkScreen> createState() => _HomeworkScreenState();
+}
+
+class _HomeworkScreenState extends ConsumerState<HomeworkScreen> {
+  bool _showOlder = false;
+
+  @override
+  Widget build(BuildContext context) {
     final session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
     final homework = ref.watch(homeworkOverviewProvider(session));
 
-    final items = [...homework.homeWorks]..sort((a, b) => a.endDate.compareTo(b.endDate));
+    final split = splitHomeworkByDueDate(homework.homeWorks);
+
+    Widget tileFor(HomeworkItem item) {
+      final lesson = homework.lessonsById[item.lessonId];
+      final subject = lesson != null ? session.userData.subjects[lesson.subjectId] : null;
+      return _HomeworkTile(subjectName: subject?.name ?? 'Unbekanntes Fach', item: item);
+    }
+
+    void addGroup(List<Widget> target, List<HomeworkItem> items) {
+      for (var i = 0; i < items.length; i++) {
+        if (i > 0) {
+          target.add(const Divider(height: 1, indent: 16));
+        }
+        target.add(tileFor(items[i]));
+      }
+    }
+
+    final children = <Widget>[];
+    if (split.upcoming.isEmpty && split.older.isEmpty) {
+      children.add(
+        const Padding(
+          padding: EdgeInsets.all(32),
+          child: Center(child: Text('Keine Hausaufgaben')),
+        ),
+      );
+    } else {
+      if (split.upcoming.isEmpty) {
+        children.add(
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Text('Keine anstehenden Hausaufgaben'),
+          ),
+        );
+      } else {
+        addGroup(children, split.upcoming);
+      }
+      if (split.older.isNotEmpty) {
+        children.add(
+          _OlderHomeworkToggle(
+            count: split.older.length,
+            expanded: _showOlder,
+            onToggle: () => setState(() => _showOlder = !_showOlder),
+          ),
+        );
+        if (_showOlder) {
+          addGroup(children, split.older);
+        }
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Hausaufgaben')),
@@ -22,26 +78,31 @@ class HomeworkScreen extends ConsumerWidget {
           ref.invalidate(requestHomeworkProvider(session));
           await ref.read(requestHomeworkProvider(session).future);
         },
-        child: items.isEmpty
-            ? ListView(
-                children: const [
-                  Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: Text('Keine Hausaufgaben')),
-                  ),
-                ],
-              )
-            : ListView.separated(
-                itemCount: items.length,
-                separatorBuilder: (_, _) => const Divider(height: 1, indent: 16),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  final lesson = homework.lessonsById[item.lessonId];
-                  final subject = lesson != null ? session.userData.subjects[lesson.subjectId] : null;
-                  return _HomeworkTile(subjectName: subject?.name ?? 'Unbekanntes Fach', item: item);
-                },
-              ),
+        child: ListView(children: children),
       ),
+    );
+  }
+}
+
+class _OlderHomeworkToggle extends StatelessWidget {
+  const _OlderHomeworkToggle({
+    required this.count,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  final int count;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(expanded ? Icons.expand_less : Icons.expand_more),
+      title: Text(
+        expanded ? 'Ältere Hausaufgaben ausblenden' : 'Zeige ältere Hausaufgaben ($count)',
+      ),
+      onTap: onToggle,
     );
   }
 }

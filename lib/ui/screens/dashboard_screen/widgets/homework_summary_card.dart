@@ -6,13 +6,17 @@ import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/screens/dashboard_screen/widgets/dashboard_summary_card.dart';
 import 'package:your_schedule/ui/screens/homework_screen/homework_screen.dart';
 import 'package:your_schedule/util/date.dart';
+import 'package:your_schedule/util/homework_grouping.dart';
 
 const _windowDays = 7;
 const _maxItemsShown = 4;
 
-/// Homework due within the next [_windowDays] days (or already overdue), capped to
+/// Upcoming homework due within the next [_windowDays] days, capped to
 /// [_maxItemsShown] — "Alle anzeigen" is the only remaining path to [HomeworkScreen],
-/// so it's always shown, even when this card's own filtered list is empty.
+/// so it's always shown, even when this card's own filtered list is empty. Already
+/// overdue homework is deliberately excluded here: on [HomeworkScreen] itself those
+/// items sit collapsed behind "Zeige ältere Hausaufgaben", so the home screen — which
+/// has no such toggle — shouldn't surface them either.
 class HomeworkSummaryCard extends ConsumerWidget {
   const HomeworkSummaryCard({super.key});
 
@@ -22,14 +26,14 @@ class HomeworkSummaryCard extends ConsumerWidget {
     final homework = ref.watch(homeworkOverviewProvider(session));
 
     final today = Date.now();
-    final items = homework.homeWorks.where((item) {
+    final upcoming = splitHomeworkByDueDate(homework.homeWorks, today: today).upcoming;
+    final items = upcoming.where((item) {
       if (item.completed) {
         return false;
       }
       final daysUntilDue = Date(item.endDate).differenceInDays(today);
       return daysUntilDue <= _windowDays;
-    }).toList()
-      ..sort((a, b) => a.endDate.compareTo(b.endDate));
+    }).toList();
 
     final displayed = items.take(_maxItemsShown).toList();
     final remaining = items.length - displayed.length;
@@ -73,7 +77,6 @@ class _HomeworkSummaryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final daysUntilDue = Date(item.endDate).differenceInDays(Date.now());
     final dueLabel = switch (daysUntilDue) {
-      < 0 => 'Überfällig',
       0 => 'Heute fällig',
       _ => 'In $daysUntilDue Tagen',
     };
