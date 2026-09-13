@@ -1,7 +1,7 @@
 name: your_schedule
 description: Filter your Untis Schedule by classes you have chosen.
 
-version: 2.0.1+2001
+version: 2.0.2+2002
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
@@ -11,24 +11,24 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.6.0
-  logger: ^2.7.0
+  logger: ^2.8.0
   flutter_material_color_picker: ^1.2.0
-  flutter_riverpod: ^3.4.2
-  flutter_secure_storage: ^11.0.0
+  flutter_riverpod: ^3.4.3
+  flutter_secure_storage: ^11.1.1
   shared_preferences: ^2.5.5
   google_fonts: ^8.2.1
   intl: ^0.20.3
   flutter_native_splash: ^2.4.8
-  sentry_flutter: ^9.27.0
+  sentry_flutter: ^9.30.0
   freezed_annotation: ^3.1.0
   json_annotation: ^4.12.0
   otp: ^3.2.0
-  riverpod_annotation: ^4.0.6
+  riverpod_annotation: ^4.0.7
   dart_extensions_methods: ^2.0.0
   connectivity_plus: ^7.3.1
-  animations: ^2.2.0
+  animations: ^3.0.0
   qr_code_scanner_plus: ^2.2.0
-  vibration: ^3.2.0
+  vibration: ^3.2.1
   url_launcher: ^6.3.2
   path_provider: ^2.1.6
   open_filex: ^4.7.0
@@ -38,11 +38,11 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
-  build_runner: ^2.16.0
-  freezed: ^4.0.0-dev.3
+  build_runner: ^2.16.1
+  freezed: ^4.0.1
   json_serializable: ^6.14.1
-  riverpod_generator: ^4.0.8
-  riverpod_lint: ^3.1.8
+  riverpod_generator: ^4.0.9
+  riverpod_lint: ^3.1.9
   mocktail: ^1.0.5
 
 flutter_launcher_icons:
