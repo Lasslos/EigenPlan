@@ -54,6 +54,35 @@ class SettingsScreen extends ConsumerWidget {
               );
             },
           ),
+          ListTile(
+            title: const Text('Farben zurücksetzen'),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Farben zurücksetzen'),
+                  content: const Text(
+                    'Möchtest du wirklich alle Farben der Fächer zurücksetzen?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Abbrechen'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        ref.read(customSubjectColorsProvider.notifier).reset();
+                      },
+                      child: const Text('Zurücksetzen'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.only(
               top: 16.0,
@@ -62,7 +91,7 @@ class SettingsScreen extends ConsumerWidget {
               bottom: 8.0,
             ),
             child: Text(
-              'Design',
+              'Anzeige',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(
                   context,
@@ -106,35 +135,6 @@ class SettingsScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            title: const Text('Farben zurücksetzen'),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Farben zurücksetzen'),
-                  content: const Text(
-                    'Möchtest du wirklich alle Farben der Fächer zurücksetzen?',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('Abbrechen'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        ref.read(customSubjectColorsProvider.notifier).reset();
-                      },
-                      child: const Text('Zurücksetzen'),
-                    ),
-                  ],
                 ),
               );
             },
