@@ -7,6 +7,7 @@ import 'package:your_schedule/core/provider/timetable_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/screens/dashboard_screen/widgets/dashboard_summary_card.dart';
+import 'package:your_schedule/ui/shared/course_chip.dart';
 import 'package:your_schedule/ui/shared/timed_refresh.dart';
 import 'package:your_schedule/util/schedule_status.dart';
 import 'package:your_schedule/utils.dart';
@@ -185,10 +186,9 @@ class _IrregularityTile extends StatelessWidget {
   }
 }
 
-/// The next school day, condensed to two lines — not a second timetable, just "when"
-/// and "which subjects" (the day itself is the card's title, e.g. "Morgen"):
-/// "Unterricht von 8:00–15:45 Uhr"
-/// "Fächer: Spanisch, Deutsch, Politik und Wirtschaft und Wahlpflichtunterricht"
+/// The next school day, condensed — not a second timetable, just "when" (the day
+/// itself is the card's title, e.g. "Morgen") and "which subjects", the latter as a
+/// row of course-colored chips (see [CourseChip]) rather than a plain text list.
 class _NextDayOverviewContent extends StatelessWidget {
   const _NextDayOverviewContent({
     required this.hasDay,
@@ -211,7 +211,7 @@ class _NextDayOverviewContent extends StatelessWidget {
       return const Text('Keine Stundenplandaten verfügbar.');
     }
     final bounds = schoolDayBounds(dayData, overrides);
-    final subjects = _distinctSubjects(lessons);
+    final courses = _distinctCourses(lessons);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,12 +221,15 @@ class _NextDayOverviewContent extends StatelessWidget {
             'Unterricht von ${_time(bounds.start)}–${_time(bounds.end)} Uhr',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
-        if (subjects.isNotEmpty)
+        if (courses.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              'Fächer: ${_joinGerman(subjects)}',
-              style: Theme.of(context).textTheme.bodySmall,
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final course in courses) CourseChip(label: course.name, courseKey: course.courseKey),
+              ],
             ),
           ),
       ],
@@ -245,29 +248,22 @@ String _dayLabel(Date day) {
 
 String _time(DateTime time) => intl.DateFormat('H:mm', 'de').format(time);
 
-/// Subject names on [lessons] in first-occurrence (i.e. chronological) order,
-/// deduplicated by name and excluding cancelled entries — a subject that only
-/// occurs cancelled that day isn't happening, so it's left out.
-List<String> _distinctSubjects(List<GridEntry> lessons) {
+/// Courses on [lessons] in first-occurrence (i.e. chronological) order, deduplicated
+/// by `courseKey` (falling back to name when an entry has no `courseKey`) and
+/// excluding cancelled entries — a subject that only occurs cancelled that day isn't
+/// happening, so it's left out.
+List<({String? courseKey, String name})> _distinctCourses(List<GridEntry> lessons) {
   final seen = <String>{};
-  final names = <String>[];
+  final courses = <({String? courseKey, String name})>[];
   for (final entry in lessons) {
     if (entry.isCancelled) {
       continue;
     }
+    final courseKey = entry.courseKey;
     final name = _subjectName(entry);
-    if (seen.add(name)) {
-      names.add(name);
+    if (seen.add(courseKey ?? name)) {
+      courses.add((courseKey: courseKey, name: name));
     }
   }
-  return names;
-}
-
-/// Joins [items] the way German lists them in prose: commas throughout, "und" only
-/// before the last item — e.g. `["A", "B", "C"]` → `"A, B und C"`.
-String _joinGerman(List<String> items) {
-  if (items.length <= 1) {
-    return items.isEmpty ? '' : items.first;
-  }
-  return '${items.sublist(0, items.length - 1).join(', ')} und ${items.last}';
+  return courses;
 }

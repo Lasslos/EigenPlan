@@ -88,3 +88,21 @@ class Date implements Comparable<Date> {
     return format.format(_date);
   }
 }
+
+/// German relative-day wording for [date], which is [daysFromNow] days from today (as
+/// returned by [Date.differenceInDays]) — "Heute"/"Morgen"/"In N Tagen" ahead,
+/// "Gestern"/"Vor N Tagen" in the past, falling back to an absolute "dd.MM.yyyy" date
+/// once [daysFromNow] is more than a week out in either direction (`date` is only used
+/// for that fallback). The single source of this wording, used everywhere a date is
+/// shown relative to today: homework/exam dashboard cards, the homework list, and the
+/// exam list's day headers.
+String relativeDayLabel(int daysFromNow, DateTime date) {
+  return switch (daysFromNow) {
+    0 => 'Heute',
+    1 => 'Morgen',
+    -1 => 'Gestern',
+    > 1 && <= 7 => 'In $daysFromNow Tagen',
+    < -1 && >= -7 => 'Vor ${-daysFromNow} Tagen',
+    _ => DateFormat('dd.MM.yyyy').format(date),
+  };
+}

@@ -177,7 +177,7 @@ class TimeGridColumnElement extends StatelessWidget {
               ],
             ),
           ),
-          Text(
+          if (entry.label.isNotEmpty) Text(
             entry.label,
             style: theme.textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.bold,
