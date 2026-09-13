@@ -1,0 +1,7 @@
+Neu:
+- Fächer werden auf der Startseite (Hausaufgaben, Prüfungen, Status) jetzt genauso farbig hervorgehoben wie im Stundenplan
+- Einheitlichere Datumsanzeige bei Hausaufgaben und Prüfungen (Heute, Morgen, Gestern, In N Tagen)
+
+Fehlerbehebungen:
+- Der Stundenplan zeigt jetzt alle betroffenen Klassen an, wenn ein Termin mehrere Klassen betrifft
+- Hausaufgaben berücksichtigen jetzt die Filter-Einstellungen, überfällige Hausaufgaben werden nicht mehr auf der Startseite angezeigt
