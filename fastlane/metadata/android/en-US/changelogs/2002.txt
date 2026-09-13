@@ -1,0 +1,7 @@
+New:
+- Subjects on the home screen (homework, exams, status) are now color-coded, just like in the timetable
+- More consistent date wording for homework and exams (Today, Tomorrow, Yesterday, In N days)
+
+Bug fixes:
+- The timetable now shows all affected classes when a lesson involves more than one class
+- Homework now respects your filter settings, and overdue homework is no longer shown on the home screen
