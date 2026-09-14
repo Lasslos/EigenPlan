@@ -1,0 +1,8 @@
+Neu:
+- Die Höhe der Stunden im Stundenplan lässt sich jetzt in den Einstellungen einstellen — danke an @nvzeppelin
+- Die Statuskarte zeigt schon vor der ersten Stunde, was heute ansteht, statt direkt auf morgen zu springen
+
+Fehlerbehebungen:
+- Countdowns, Zeitmarkierung und Heute/Morgen-Angaben bleiben nicht mehr stehen, sondern aktualisieren sich laufend
+- Über Mitternacht verschiebt sich der Stundenplan nicht mehr um einen Tag bzw. eine Woche
+- Eine heute schon geschriebene Prüfung verschwindet nicht mehr mitten am Tag aus der Prüfungsliste

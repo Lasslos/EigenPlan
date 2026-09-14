@@ -1,0 +1,8 @@
+New:
+- The height of a period in the timetable is now adjustable in the settings — thanks to @nvzeppelin
+- The status card shows what's on today before your first lesson, instead of jumping straight to tomorrow
+
+Bug fixes:
+- Countdowns, the time indicator and Heute/Morgen labels no longer get stuck — they now keep updating
+- The timetable no longer shifts by a day (or a week) across midnight
+- An exam written earlier today no longer disappears from the exams list mid-day
