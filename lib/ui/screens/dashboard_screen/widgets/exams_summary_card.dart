@@ -8,6 +8,7 @@ import 'package:your_schedule/ui/screens/dashboard_screen/widgets/dashboard_summ
 import 'package:your_schedule/ui/screens/exams_screen/exams_screen.dart';
 import 'package:your_schedule/ui/shared/course_chip.dart';
 import 'package:your_schedule/util/date.dart';
+import 'package:your_schedule/util/exam_visibility.dart';
 import 'package:your_schedule/util/week.dart';
 
 const _windowDays = 14;
@@ -35,7 +36,7 @@ class ExamsSummaryCard extends ConsumerWidget {
     ]
       ..removeWhere((exam) {
         final daysUntil = Date(exam.startDateTime).differenceInDays(today);
-        return daysUntil < 0 || daysUntil >= _windowDays;
+        return isExamPast(exam, today) || daysUntil >= _windowDays;
       })
       ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
 

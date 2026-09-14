@@ -7,6 +7,7 @@ import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/shared/course_chip.dart';
 import 'package:your_schedule/util/date.dart';
+import 'package:your_schedule/util/exam_visibility.dart';
 import 'package:your_schedule/util/week.dart';
 
 const _initialWeeksShown = 6;
@@ -27,9 +28,9 @@ class _ExamsScreenState extends ConsumerState<ExamsScreen> {
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
-    // An exam drops off this list the minute it ends, so the list has to follow the clock
-    // rather than whenever the screen last happened to rebuild.
-    final now = ref.watch(currentMinuteProvider);
+    // An exam drops off this list once its day is over, so the list has to follow the
+    // clock rather than whenever the screen last happened to rebuild — [todayProvider]
+    // notifies at midnight.
     final today = ref.watch(todayProvider);
     final weeks = _weeks(today);
 
@@ -37,7 +38,7 @@ class _ExamsScreenState extends ConsumerState<ExamsScreen> {
       for (final week in weeks)
         for (final dayExams in ref.watch(examsProvider(session, week)).values) ...dayExams,
     ]
-      ..removeWhere((exam) => exam.endDateTime.isBefore(now))
+      ..removeWhere((exam) => isExamPast(exam, today))
       ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
 
     return Scaffold(
