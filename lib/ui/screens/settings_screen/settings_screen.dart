@@ -59,7 +59,7 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           ListTile(
-            title: const Text('Stundenhöhe'),
+            title: const Text('Zeitblock-Höhe'),
             onTap: () {
               showDialog(
                 context: context,
