@@ -41,7 +41,6 @@ class _TimeGridWidgetState extends ConsumerState<TimeGridWidget> {
         .toList()
         ..sort())[timeGrid.length ~/ 2];
 
-    // One class duration should be 82 pixels.
     // The header is 42 pixels.
 
     double height = dayDuration.inMinutes / medianClassDuration.inMinutes * ref.watch(gridCellHeightSettingProvider) + 42;
