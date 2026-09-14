@@ -1,10 +1,13 @@
+import 'package:dart_extensions_methods/dart_extension_methods.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:your_schedule/core/provider/custom_subject_colors.dart';
 import 'package:your_schedule/core/provider/mobile_data_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/settings/dashboard_cards_provider.dart';
+import 'package:your_schedule/settings/grid_cell_height_provider.dart';
 import 'package:your_schedule/settings/sentry_provider.dart';
 import 'package:your_schedule/settings/theme_provider.dart';
 import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
@@ -16,6 +19,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final gridCellHeightController = TextEditingController(text: ref.watch(gridCellHeightSettingProvider).toString());
     final session =
         ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
 
@@ -51,6 +55,54 @@ class SettingsScreen extends ConsumerWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const FilterScreen()),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('Stundenhöhe'),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Höhe'),
+                  content: /*Slider(
+                    value: ref.watch(gridCellHeightSettingProvider).toDouble(),
+                    onChanged: (double value) {
+                      ref.read(gridCellHeightSettingProvider.notifier).setgridCellHeight(value.round());
+                    },
+                    label: ref.watch(gridCellHeightSettingProvider).toString(),
+                    min: 20,
+                    max: 100,
+                  )*/
+                  TextFormField(
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Höhe:'
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    onFieldSubmitted: (String value) {
+                      if (value.isNotEmpty) {
+                        int val = value.toInt();
+                        if (10 <= val && val <= 100) {
+                          ref.read(gridCellHeightSettingProvider.notifier).setGridCellHeight(val);
+                          Navigator.of(context).pop();
+                        }
+                      }
+                    },
+                    controller: gridCellHeightController,
+                  ),
+                  actions: [
+                    TextButton(onPressed: () {
+                      Navigator.of(context).pop();
+                    }, child: const Text('Abbrechen')),
+                    TextButton(onPressed: () {
+                      ref.read(gridCellHeightSettingProvider.notifier).setGridCellHeight(gridCellHeightController.text.toInt());
+                      Navigator.of(context).pop();
+                    }, child: const Text('Bestätigen'))
+                  ],
+                ),
               );
             },
           ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
+import 'package:your_schedule/settings/grid_cell_height_provider.dart';
 import 'package:your_schedule/utils.dart';
 
 class TimeGridWidget extends ConsumerStatefulWidget {
@@ -43,7 +44,7 @@ class _TimeGridWidgetState extends ConsumerState<TimeGridWidget> {
     // One class duration should be 82 pixels.
     // The header is 42 pixels.
 
-    double height = dayDuration.inMinutes / medianClassDuration.inMinutes * 82 + 42;
+    double height = dayDuration.inMinutes / medianClassDuration.inMinutes * ref.watch(gridCellHeightSettingProvider) + 42;
     height = max(150, height);
 
     return SingleChildScrollView(
