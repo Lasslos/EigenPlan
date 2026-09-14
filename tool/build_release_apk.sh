@@ -8,6 +8,8 @@ if [[ ! -f android/key.properties ]]; then
   echo "warning: android/key.properties not found - the release build will be unsigned." >&2
 fi
 
+echo "==> flutter clean"
+flutter clean
 echo "==> flutter pub get"
 flutter pub get
 
