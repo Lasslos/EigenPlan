@@ -67,6 +67,16 @@ android {
             if (hasKeystoreProperties) {
                 signingConfig = signingConfigs.getByName("release")
             }
+
+            // Remove unused code and resources, and optimize the code without
+            // obfuscating (see proguard-rules.pro's -dontobfuscate) so that the
+            // build stays reproducible.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
