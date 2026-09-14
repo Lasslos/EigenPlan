@@ -106,3 +106,18 @@ String relativeDayLabel(int daysFromNow, DateTime date) {
     _ => DateFormat('dd.MM.yyyy').format(date),
   };
 }
+
+/// The compact timestamp shown next to a message in a list: the time of day when [sent]
+/// falls on [today], the day and month within the current year, and the full date before
+/// that. [today] is passed in rather than read from the clock so the label follows the day
+/// rolling over in a list that stays on screen.
+String formatMessageTimestamp(DateTime sent, Date today) {
+  final sentDate = Date(sent);
+  if (sentDate == today) {
+    return DateFormat('HH:mm').format(sent);
+  }
+  if (sentDate.year == today.year) {
+    return DateFormat('d.MM.').format(sent);
+  }
+  return DateFormat('d.MM.yyyy').format(sent);
+}

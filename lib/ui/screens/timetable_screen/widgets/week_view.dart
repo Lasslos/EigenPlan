@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/filters.dart';
 import 'package:your_schedule/core/provider/selected_timetable_resource_provider.dart';
 import 'package:your_schedule/core/provider/timetable_provider.dart';
@@ -160,7 +161,7 @@ class _Page extends ConsumerWidget {
                   );
                 }),
               ),
-              if (index == _dateToIndex(Date.now())) const TimeIndicator(),
+              if (currentWeek == Week.fromDate(ref.watch(todayProvider))) const TimeIndicator(),
             ],
           ),
         ),
@@ -169,14 +170,19 @@ class _Page extends ConsumerWidget {
   }
 }
 
-//To allow backwards scrolling, today's index is set to 1 << 30 (Max int32 value / 2)
+//To allow backwards scrolling, the epoch week's index is set to 1 << 30 (Max int32 value / 2)
+//
+//Deliberately a fixed week rather than the current one: the PageController outlives midnight,
+//so an anchor that moved with the clock would silently re-map every page — the week you were
+//looking at would become a different one without the view ever scrolling.
+final _epochWeekStart = Date.raw(2000, 1, 1).startOfWeek();
+
 int _dateToIndex(Date date) {
-  return (date.differenceInDays(Week.now().startDate) / 7.0).floor() +
-      (1 << 30);
+  return (date.differenceInDays(_epochWeekStart) / 7.0).floor() + (1 << 30);
 }
 
 Date _indexToDate(int index, int daysRelativeToStartOfWeek) {
-  return Week.now().startDate.addDays(
+  return _epochWeekStart.addDays(
     (index - (1 << 30)) * 7 + daysRelativeToStartOfWeek,
   );
 }

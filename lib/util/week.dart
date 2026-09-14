@@ -18,6 +18,12 @@ class Week {
       : startDate = Date.now().startOfWeek().addWeeks(relative),
         endDate = Date.now().endOfWeek().addWeeks(relative);
 
+  /// [relative] weeks from whichever week [reference] falls in — the same thing as
+  /// [Week.relative], but anchored on a date the caller controls. Widgets use this with
+  /// `todayProvider` so that week-keyed providers follow the date over midnight instead of
+  /// staying pinned to whenever the widget last rebuilt.
+  Week.relativeTo(Date reference, int relative) : this.fromDate(reference.addWeeks(relative));
+
   List<Date> get daysInWeek => [for (int i = 0; i < 7; i++) startDate.addDays(i)];
 
   @override

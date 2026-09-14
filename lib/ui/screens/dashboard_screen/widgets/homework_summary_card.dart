@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/homework_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -12,7 +13,7 @@ import 'package:your_schedule/util/homework_grouping.dart';
 const _windowDays = 7;
 const _maxItemsShown = 4;
 
-/// Upcoming homework due within the next [_windowDays] days, capped to
+/// Upcoming homework due today or within the following [_windowDays] - 1 days, capped to
 /// [_maxItemsShown] — "Alle anzeigen" is the only remaining path to [HomeworkScreen],
 /// so it's always shown, even when this card's own filtered list is empty. Already
 /// overdue homework is deliberately excluded here: on [HomeworkScreen] itself those
@@ -26,14 +27,14 @@ class HomeworkSummaryCard extends ConsumerWidget {
     final session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
     final homework = ref.watch(homeworkOverviewProvider(session));
 
-    final today = Date.now();
+    final today = ref.watch(todayProvider);
     final upcoming = splitHomeworkByDueDate(homework.homeWorks, today: today).upcoming;
     final items = upcoming.where((item) {
       if (item.completed) {
         return false;
       }
       final daysUntilDue = Date(item.endDate).differenceInDays(today);
-      return daysUntilDue <= _windowDays;
+      return daysUntilDue < _windowDays;
     }).toList();
 
     final displayed = items.take(_maxItemsShown).toList();
@@ -55,6 +56,7 @@ class HomeworkSummaryCard extends ConsumerWidget {
                     subjectName: _subjectName(homework, session, item),
                     courseKey: _courseKey(homework, session, item),
                     item: item,
+                    today: today,
                   ),
                 if (remaining > 0) _RemainingLabel(remaining),
               ],
@@ -76,15 +78,21 @@ String? _courseKey(Homework homework, ActiveUntisSession session, HomeworkItem i
 }
 
 class _HomeworkSummaryTile extends StatelessWidget {
-  const _HomeworkSummaryTile({required this.subjectName, required this.courseKey, required this.item});
+  const _HomeworkSummaryTile({
+    required this.subjectName,
+    required this.courseKey,
+    required this.item,
+    required this.today,
+  });
 
   final String subjectName;
   final String? courseKey;
   final HomeworkItem item;
+  final Date today;
 
   @override
   Widget build(BuildContext context) {
-    final daysUntilDue = Date(item.endDate).differenceInDays(Date.now());
+    final daysUntilDue = Date(item.endDate).differenceInDays(today);
     final dueLabel = relativeDayLabel(daysUntilDue, item.endDate);
     final dueDateColor = daysUntilDue <= 2 ? Colors.orange : null;
     return ListTile(

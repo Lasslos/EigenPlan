@@ -1,23 +1,36 @@
-import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/util/date.dart';
 import 'package:your_schedule/util/date_utils.dart';
 
-/// Whether [now] falls between the first and last [TimeGridEntry] of the school day —
-/// i.e. whether classes could currently be in session. Mirrors the boundary check
-/// `TimeIndicator` draws on the timetable grid.
+/// Whole minutes from [now] until [target], rounded **up** and clamped at 0.
 ///
-/// Deliberately a plain function rather than a `@riverpod` provider: a provider that
-/// read `DateTime.now()` internally would only recompute when a *watched* dependency
-/// changes, never on its own — wall-clock time isn't one, so it would compute once and
-/// freeze. Callers re-invoke this every tick via `TimedRefresh` instead.
-bool isWithinSchoolHours(List<TimeGridEntry> timeGrid, DateTime now) {
-  if (timeGrid.isEmpty) {
-    return false;
+/// Rounding up is what a countdown means colloquially: at 11:43 a lesson starting at 11:45
+/// is "in 2 Minuten", even though 2 full minutes may not be left. Truncating instead (what
+/// `Duration.inMinutes` does) would call that same moment "1 Minute".
+///
+/// Callers pass a `now` truncated to the minute (see `currentMinuteProvider`), which makes
+/// the result stable for the whole minute and step down exactly on the boundary.
+int minutesUntil(DateTime target, DateTime now) {
+  final remaining = target.difference(now);
+  if (remaining <= Duration.zero) {
+    return 0;
   }
-  final time = TimeOfDay.fromDateTime(now);
-  return time.difference(timeGrid.first.startTime) >= Duration.zero &&
-      time.difference(timeGrid.last.endTime) <= Duration.zero;
+  return (remaining.inMicroseconds / Duration.microsecondsPerMinute).ceil();
+}
+
+/// [minutes] with the correctly inflected German unit — "1 Minute", "2 Minuten".
+String minutesLabel(int minutes) => '$minutes ${minutes == 1 ? 'Minute' : 'Minuten'}';
+
+/// [minutes] as a countdown label: plain minutes below an hour ("47 Minuten"), hours and
+/// minutes above it ("1 Std. 47 Min."). The split matters once a countdown can span the
+/// [scheduleLeadIn] before school — "119 Minuten" is a number you have to do maths on.
+String durationLabel(int minutes) {
+  if (minutes < 60) {
+    return minutesLabel(minutes);
+  }
+  final hours = minutes ~/ 60;
+  final rest = minutes % 60;
+  return rest == 0 ? '$hours Std.' : '$hours Std. $rest Min.';
 }
 
 /// Whether [entry] should be shown at all, per the Filter screen's per-course
@@ -68,18 +81,18 @@ class Irregularity {
   final GridEntry entry;
 }
 
-/// Cancelled lessons, changed/substituted lessons, and standalone events on [today],
+/// Cancelled lessons, changed/substituted lessons, and standalone events on [day],
 /// filtered through [overrides] (the Filter screen's per-course visibility map — same
 /// `overrides[courseKey] ?? true` rule `week_view.dart`/`day_view.dart` use), sorted by
 /// start time.
-List<Irregularity> todaysIrregularities(
-  TimetableDay? today,
+List<Irregularity> irregularitiesFor(
+  TimetableDay? day,
   Map<String, bool> overrides,
 ) {
-  if (today == null) {
+  if (day == null) {
     return [];
   }
-  final visible = today.gridEntries.where((e) => _isVisible(e, overrides));
+  final visible = day.gridEntries.where((e) => _isVisible(e, overrides));
 
   final irregularities = <Irregularity>[
     for (final entry in visible)
@@ -148,6 +161,52 @@ TimetableDay? lookupDay(Date day, TimeTableWeek week1, TimeTableWeek week2) => w
     }
   }
   return (start: start, end: end);
+}
+
+/// How long before the first lesson the dashboard stops describing the day as a whole and
+/// starts pointing at the room to walk to — see [ScheduleDayPhase.startingSoon].
+const scheduleLeadIn = Duration(hours: 2);
+
+/// Where [now] sits relative to a school day that hasn't finished yet.
+enum ScheduleDayPhase {
+  /// The first lesson is further off than [scheduleLeadIn] — the early morning, say.
+  beforeStart,
+
+  /// The first lesson is within [scheduleLeadIn]: close enough that where to go matters
+  /// more than an overview of the day.
+  startingSoon,
+
+  /// A lesson is running, or [now] is in a gap/break between two of them.
+  inProgress,
+}
+
+/// Where [now] sits relative to [bounds] (a day's real start/end per [schoolDayBounds]),
+/// counting the [leadIn] before the first lesson as part of the day.
+///
+/// `null` once the day is over — or when it never had any visible, non-cancelled lessons
+/// to begin with — which is exactly when a caller should move on to the next school day.
+/// Deriving this from [schoolDayBounds] rather than from the school's global time grid is
+/// what makes it personal: a morning whose first two periods are cancelled, or whose only
+/// early lesson is filtered out on the Filter screen, counts as [beforeStart] right up
+/// until the lesson the user actually has to attend.
+ScheduleDayPhase? schoolDayPhase(
+  ({DateTime start, DateTime end})? bounds,
+  DateTime now, {
+  Duration leadIn = scheduleLeadIn,
+}) {
+  if (bounds == null) {
+    return null;
+  }
+  if (now.isBefore(bounds.start.subtract(leadIn))) {
+    return ScheduleDayPhase.beforeStart;
+  }
+  if (now.isBefore(bounds.start)) {
+    return ScheduleDayPhase.startingSoon;
+  }
+  if (now.isBefore(bounds.end)) {
+    return ScheduleDayPhase.inProgress;
+  }
+  return null;
 }
 
 /// Every lesson on [day] — cancelled ones included, so this reads as a real summary of

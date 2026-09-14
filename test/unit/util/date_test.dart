@@ -56,4 +56,28 @@ void main() {
       expect(relativeDayLabel(-42, date), '12.01.2026');
     });
   });
+
+  group('formatMessageTimestamp', () {
+    final today = Date.raw(2026, 3, 5);
+
+    test('shows the time of day for a message sent today', () {
+      expect(formatMessageTimestamp(DateTime(2026, 3, 5, 9, 7), today), '09:07');
+      expect(formatMessageTimestamp(DateTime(2026, 3, 5, 23, 59), today), '23:59');
+    });
+
+    test('shows day and month within the current year', () {
+      expect(formatMessageTimestamp(DateTime(2026, 3, 4, 22), today), '4.03.');
+      expect(formatMessageTimestamp(DateTime(2026, 12, 31), today), '31.12.');
+    });
+
+    test('shows the full date for an earlier year', () {
+      expect(formatMessageTimestamp(DateTime(2025, 12, 31, 22), today), '31.12.2025');
+    });
+
+    test('a message sent yesterday late is dated, not timed', () {
+      // Regression: the old helper compared against DateTime.now() read at build time, so
+      // after midnight yesterday's messages kept rendering as a time of day.
+      expect(formatMessageTimestamp(DateTime(2026, 3, 4, 23, 55), today), '4.03.');
+    });
+  });
 }

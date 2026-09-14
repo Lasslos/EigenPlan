@@ -1,16 +1,9 @@
-import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/util/date.dart';
 import 'package:your_schedule/util/schedule_status.dart';
 
 const _resource = TimetableResource(id: 1, shortName: 'own');
-
-TimeGridEntry _grid(String label, int startHour, int endHour) => TimeGridEntry(
-      label,
-      TimeOfDay(hour: startHour, minute: 0),
-      TimeOfDay(hour: endHour, minute: 0),
-    );
 
 GridEntry _entry({
   required DateTime start,
@@ -47,23 +40,55 @@ TimetableDay _day(DateTime date, List<GridEntry> entries, {String status = 'REGU
     );
 
 void main() {
-  group('isWithinSchoolHours', () {
-    final timeGrid = [_grid('1', 8, 9), _grid('6', 13, 14)];
+  group('schoolDayPhase', () {
+    final day1 = DateTime(2026, 1, 5, 8);
+    final bounds = (start: DateTime(2026, 1, 5, 8), end: DateTime(2026, 1, 5, 13));
 
-    test('false for an empty time grid', () {
-      expect(isWithinSchoolHours(const [], DateTime(2026, 1, 5, 10)), isFalse);
+    test('null for a day with no bounds at all', () {
+      expect(schoolDayPhase(null, DateTime(2026, 1, 5, 10)), isNull);
     });
 
-    test('false before the first lesson starts', () {
-      expect(isWithinSchoolHours(timeGrid, DateTime(2026, 1, 5, 7, 59)), isFalse);
+    test('beforeStart while the first lesson is further off than the lead-in', () {
+      expect(schoolDayPhase(bounds, DateTime(2026, 1, 5, 5, 30)), ScheduleDayPhase.beforeStart);
+      expect(schoolDayPhase(bounds, DateTime(2026, 1, 5, 5, 59)), ScheduleDayPhase.beforeStart);
     });
 
-    test('false after the last lesson ends', () {
-      expect(isWithinSchoolHours(timeGrid, DateTime(2026, 1, 5, 14, 1)), isFalse);
+    test('startingSoon once the lead-in window opens', () {
+      expect(schoolDayPhase(bounds, DateTime(2026, 1, 5, 6)), ScheduleDayPhase.startingSoon);
+      expect(schoolDayPhase(bounds, DateTime(2026, 1, 5, 7, 59)), ScheduleDayPhase.startingSoon);
     });
 
-    test('true between the first and last lesson', () {
-      expect(isWithinSchoolHours(timeGrid, DateTime(2026, 1, 5, 10)), isTrue);
+    test('honours a custom lead-in', () {
+      expect(
+        schoolDayPhase(bounds, DateTime(2026, 1, 5, 7, 20), leadIn: const Duration(minutes: 30)),
+        ScheduleDayPhase.beforeStart,
+      );
+      expect(
+        schoolDayPhase(bounds, DateTime(2026, 1, 5, 7, 40), leadIn: const Duration(minutes: 30)),
+        ScheduleDayPhase.startingSoon,
+      );
+    });
+
+    test('inProgress from the first lesson onwards, including breaks', () {
+      expect(schoolDayPhase(bounds, DateTime(2026, 1, 5, 8)), ScheduleDayPhase.inProgress);
+      expect(schoolDayPhase(bounds, DateTime(2026, 1, 5, 10, 15)), ScheduleDayPhase.inProgress);
+      expect(schoolDayPhase(bounds, DateTime(2026, 1, 5, 12, 59)), ScheduleDayPhase.inProgress);
+    });
+
+    test('null once the last lesson has ended', () {
+      expect(schoolDayPhase(bounds, DateTime(2026, 1, 5, 13)), isNull);
+      expect(schoolDayPhase(bounds, DateTime(2026, 1, 5, 15)), isNull);
+    });
+
+    test('a cancelled first period pushes the start back, not the phase forward', () {
+      // The reported bug in miniature: at 08:30 the day the user actually attends hasn't
+      // begun, so this is still a day being waited on — not one already under way.
+      final entries = [
+        _entry(start: DateTime(2026, 1, 5, 8), end: DateTime(2026, 1, 5, 9), status: 'CANCELLED', subjectShortName: 'Ma'),
+        _entry(start: DateTime(2026, 1, 5, 9), end: DateTime(2026, 1, 5, 10), subjectShortName: 'De'),
+      ];
+      final phase = schoolDayPhase(schoolDayBounds(_day(day1, entries), const {}), DateTime(2026, 1, 5, 8, 30));
+      expect(phase, ScheduleDayPhase.startingSoon);
     });
   });
 
@@ -111,7 +136,7 @@ void main() {
     });
   });
 
-  group('todaysIrregularities', () {
+  group('irregularitiesFor', () {
     final day1 = DateTime(2026, 1, 5, 8);
 
     test('classifies cancelled, changed, and event entries', () {
@@ -121,7 +146,7 @@ void main() {
         _entry(start: DateTime(2026, 1, 5, 11), end: DateTime(2026, 1, 5, 12), type: 'EVENT', subjectShortName: 'Sport'),
         _entry(start: DateTime(2026, 1, 5, 12), end: DateTime(2026, 1, 5, 13), subjectShortName: 'Regular'),
       ];
-      final result = todaysIrregularities(_day(day1, entries), const {});
+      final result = irregularitiesFor(_day(day1, entries), const {});
       expect(result, hasLength(3));
       expect(result[0].kind, IrregularityKind.cancelled);
       expect(result[1].kind, IrregularityKind.changed);
@@ -132,12 +157,12 @@ void main() {
       final entries = [
         _entry(start: DateTime(2026, 1, 5, 8), end: DateTime(2026, 1, 5, 9), status: 'CANCELLED', subjectShortName: 'Ma'),
       ];
-      final result = todaysIrregularities(_day(day1, entries), {'Ma|': false});
+      final result = irregularitiesFor(_day(day1, entries), {'Ma|': false});
       expect(result, isEmpty);
     });
 
     test('empty for a null day', () {
-      expect(todaysIrregularities(null, const {}), isEmpty);
+      expect(irregularitiesFor(null, const {}), isEmpty);
     });
   });
 
@@ -245,6 +270,54 @@ void main() {
 
     test('empty for a null day', () {
       expect(visibleLessonsFor(null, const {}), isEmpty);
+    });
+  });
+
+  group('minutesUntil', () {
+    final start = DateTime(2026, 1, 5, 11, 45);
+
+    test('counts whole minutes left, not minutes elapsed', () {
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 11, 43)), 2);
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 11, 44)), 1);
+    });
+
+    test('rounds up a partial minute rather than truncating', () {
+      // The reported bug: 90s left used to render as "1 Minute".
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 11, 43, 30)), 2);
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 11, 44, 59)), 1);
+    });
+
+    test('hits zero only once the target is reached', () {
+      expect(minutesUntil(start, start.subtract(const Duration(seconds: 1))), 1);
+      expect(minutesUntil(start, start), 0);
+    });
+
+    test('clamps past targets to zero instead of going negative', () {
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 12)), 0);
+    });
+  });
+
+  group('minutesLabel', () {
+    test('inflects the German unit', () {
+      expect(minutesLabel(1), '1 Minute');
+      expect(minutesLabel(2), '2 Minuten');
+      expect(minutesLabel(0), '0 Minuten');
+    });
+  });
+
+  group('durationLabel', () {
+    test('stays in minutes below an hour', () {
+      expect(durationLabel(0), '0 Minuten');
+      expect(durationLabel(1), '1 Minute');
+      expect(durationLabel(59), '59 Minuten');
+    });
+
+    test('splits into hours and minutes from an hour up', () {
+      // A two-hour lead-in would otherwise read as "119 Minuten".
+      expect(durationLabel(60), '1 Std.');
+      expect(durationLabel(119), '1 Std. 59 Min.');
+      expect(durationLabel(120), '2 Std.');
+      expect(durationLabel(125), '2 Std. 5 Min.');
     });
   });
 }

@@ -10,6 +10,7 @@ import 'package:http/http.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/connectivity_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc.dart';
@@ -70,11 +71,36 @@ Future<void> _initializeApp() async {
   await loadSessionsFromDisk();
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  late final AppLifecycleListener _lifecycleListener;
+
+  @override
+  void initState() {
+    super.initState();
+    // Android may freeze the isolate while we're backgrounded, so [currentMinuteProvider]'s
+    // own timer can't be trusted to have fired. Re-deriving it here means everything keyed
+    // off the clock — countdowns, "Heute"/"Morgen" labels, today's timetable page — is
+    // already correct on the first frame the user sees after resuming.
+    _lifecycleListener = AppLifecycleListener(
+      onResume: () => ref.invalidate(currentMinuteProvider),
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     var theme = ref.watch(themeSettingProvider);
     return MaterialApp(
       title: 'EigenPlan',

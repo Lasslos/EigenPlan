@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/homework_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -22,7 +23,8 @@ class _HomeworkScreenState extends ConsumerState<HomeworkScreen> {
     final session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
     final homework = ref.watch(homeworkOverviewProvider(session));
 
-    final split = splitHomeworkByDueDate(homework.homeWorks);
+    final today = ref.watch(todayProvider);
+    final split = splitHomeworkByDueDate(homework.homeWorks, today: today);
 
     Widget tileFor(HomeworkItem item) {
       final lesson = homework.lessonsById[item.lessonId];
@@ -32,6 +34,7 @@ class _HomeworkScreenState extends ConsumerState<HomeworkScreen> {
         subjectName: subject?.name ?? 'Unbekanntes Fach',
         courseKey: keys.isEmpty ? null : keys.first,
         item: item,
+        today: today,
       );
     }
 
@@ -114,18 +117,24 @@ class _OlderHomeworkToggle extends StatelessWidget {
 }
 
 class _HomeworkTile extends StatelessWidget {
-  const _HomeworkTile({required this.subjectName, required this.courseKey, required this.item});
+  const _HomeworkTile({
+    required this.subjectName,
+    required this.courseKey,
+    required this.item,
+    required this.today,
+  });
 
   final String subjectName;
   final String? courseKey;
   final HomeworkItem item;
+  final Date today;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final daysUntilDue = Date(item.endDate).differenceInDays(Date.now());
+    final daysUntilDue = Date(item.endDate).differenceInDays(today);
     Color? dueDateColor;
     if (!item.completed && daysUntilDue < 0) {
       dueDateColor = colorScheme.error;

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/screens/dashboard_screen/widgets/dashboard_summary_card.dart';
-import 'package:your_schedule/util/date.dart';
 
 const _maxItemsShown = 3;
 
@@ -31,8 +31,9 @@ class AnnouncementsCard extends ConsumerWidget {
         // Only worth the extra request if something here actually claims an
         // attachment — `/dashboard/cards` doesn't carry the real link, so
         // `getMessagesOfDay2017` (keyed by the same id) is fetched to resolve it.
+        final today = ref.watch(todayProvider);
         final attachmentsById = displayed.any((c) => c.hasAttachments)
-            ? ref.watch(requestMessagesOfDayProvider(session, Date.now())).maybeWhen(
+            ? ref.watch(requestMessagesOfDayProvider(session, today)).maybeWhen(
                   data: (messages) => {for (final m in messages) m.id: m.attachments},
                   orElse: () => const <int, List<MessageOfDayAttachment>>{},
                 )
