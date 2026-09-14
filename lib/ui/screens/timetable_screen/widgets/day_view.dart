@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/filters.dart';
 import 'package:your_schedule/core/provider/selected_timetable_resource_provider.dart';
 import 'package:your_schedule/core/provider/timetable_provider.dart';
@@ -118,7 +119,7 @@ class _Page extends ConsumerWidget {
                     return courseKey == null || (overrides[courseKey] ?? true);
                   }).toList(),
                 ),
-                if (index == _dateToIndex(Date.now())) const TimeIndicator(),
+                if (currentDate == ref.watch(todayProvider)) const TimeIndicator(),
               ],
             ),
           ),
@@ -128,11 +129,17 @@ class _Page extends ConsumerWidget {
   }
 }
 
-//To allow backwards scrolling, today's index is set to 1 << 30 (Max int32 value / 2)
+//To allow backwards scrolling, the epoch's index is set to 1 << 30 (Max int32 value / 2)
+//
+//Deliberately a fixed date rather than "today": the PageController outlives midnight, so an
+//anchor that moved with the clock would silently re-map every page — the day you were looking
+//at would become a different one without the view ever scrolling.
+final _epoch = Date.raw(2000, 1, 1);
+
 int _dateToIndex(Date date) {
-  return date.differenceInDays(Date.now()) + (1 << 30);
+  return date.differenceInDays(_epoch) + (1 << 30);
 }
 
 Date _indexToDate(int index) {
-  return Date.now().addDays(index - (1 << 30));
+  return _epoch.addDays(index - (1 << 30));
 }

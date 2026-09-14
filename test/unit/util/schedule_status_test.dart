@@ -247,4 +247,36 @@ void main() {
       expect(visibleLessonsFor(null, const {}), isEmpty);
     });
   });
+
+  group('minutesUntil', () {
+    final start = DateTime(2026, 1, 5, 11, 45);
+
+    test('counts whole minutes left, not minutes elapsed', () {
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 11, 43)), 2);
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 11, 44)), 1);
+    });
+
+    test('rounds up a partial minute rather than truncating', () {
+      // The reported bug: 90s left used to render as "1 Minute".
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 11, 43, 30)), 2);
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 11, 44, 59)), 1);
+    });
+
+    test('hits zero only once the target is reached', () {
+      expect(minutesUntil(start, start.subtract(const Duration(seconds: 1))), 1);
+      expect(minutesUntil(start, start), 0);
+    });
+
+    test('clamps past targets to zero instead of going negative', () {
+      expect(minutesUntil(start, DateTime(2026, 1, 5, 12)), 0);
+    });
+  });
+
+  group('minutesLabel', () {
+    test('inflects the German unit', () {
+      expect(minutesLabel(1), '1 Minute');
+      expect(minutesLabel(2), '2 Minuten');
+      expect(minutesLabel(0), '0 Minuten');
+    });
+  });
 }

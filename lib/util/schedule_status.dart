@@ -20,6 +20,25 @@ bool isWithinSchoolHours(List<TimeGridEntry> timeGrid, DateTime now) {
       time.difference(timeGrid.last.endTime) <= Duration.zero;
 }
 
+/// Whole minutes from [now] until [target], rounded **up** and clamped at 0.
+///
+/// Rounding up is what a countdown means colloquially: at 11:43 a lesson starting at 11:45
+/// is "in 2 Minuten", even though 2 full minutes may not be left. Truncating instead (what
+/// `Duration.inMinutes` does) would call that same moment "1 Minute".
+///
+/// Callers pass a `now` truncated to the minute (see `currentMinuteProvider`), which makes
+/// the result stable for the whole minute and step down exactly on the boundary.
+int minutesUntil(DateTime target, DateTime now) {
+  final remaining = target.difference(now);
+  if (remaining <= Duration.zero) {
+    return 0;
+  }
+  return (remaining.inMicroseconds / Duration.microsecondsPerMinute).ceil();
+}
+
+/// [minutes] with the correctly inflected German unit — "1 Minute", "2 Minuten".
+String minutesLabel(int minutes) => '$minutes ${minutes == 1 ? 'Minute' : 'Minuten'}';
+
 /// Whether [entry] should be shown at all, per the Filter screen's per-course
 /// visibility map — same `overrides[courseKey] ?? true` rule `week_view.dart`/
 /// `day_view.dart` use. Entries with no `courseKey` (e.g. standalone events) are

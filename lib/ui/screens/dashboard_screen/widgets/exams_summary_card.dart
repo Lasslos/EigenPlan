@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/exams_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -13,11 +14,11 @@ const _windowDays = 14;
 const _maxItemsShown = 4;
 
 /// Weeks needed to safely cover a 14-day-forward window — since weeks here start
-/// Saturday, "today" can be as early as the first day of `Week.now()`, pushing the
-/// window into `Week.relative(2)`.
+/// Saturday, "today" can be as early as the first day of this week, pushing the
+/// window two weeks out.
 const _weeksToWatch = 3;
 
-/// Exams within the next [_windowDays] days, capped to [_maxItemsShown] —
+/// Exams today or within the following [_windowDays] - 1 days, capped to [_maxItemsShown] —
 /// "Alle anzeigen" is the only remaining path to [ExamsScreen], so it's always shown,
 /// even when this card's own filtered list is empty.
 class ExamsSummaryCard extends ConsumerWidget {
@@ -26,15 +27,15 @@ class ExamsSummaryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
-    final today = Date.now();
+    final today = ref.watch(todayProvider);
 
     final exams = <Exam>[
       for (var i = 0; i < _weeksToWatch; i++)
-        for (final dayExams in ref.watch(examsProvider(session, Week.relative(i))).values) ...dayExams,
+        for (final dayExams in ref.watch(examsProvider(session, Week.relativeTo(today, i))).values) ...dayExams,
     ]
       ..removeWhere((exam) {
         final daysUntil = Date(exam.startDateTime).differenceInDays(today);
-        return daysUntil < 0 || daysUntil > _windowDays;
+        return daysUntil < 0 || daysUntil >= _windowDays;
       })
       ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
 
@@ -52,7 +53,8 @@ class ExamsSummaryCard extends ConsumerWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final exam in displayed) _ExamSummaryTile(exam: exam, userData: session.userData),
+                for (final exam in displayed)
+                  _ExamSummaryTile(exam: exam, userData: session.userData, today: today),
                 if (remaining > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
@@ -65,15 +67,16 @@ class ExamsSummaryCard extends ConsumerWidget {
 }
 
 class _ExamSummaryTile extends StatelessWidget {
-  const _ExamSummaryTile({required this.exam, required this.userData});
+  const _ExamSummaryTile({required this.exam, required this.userData, required this.today});
 
   final Exam exam;
   final UserData userData;
+  final Date today;
 
   @override
   Widget build(BuildContext context) {
     final subject = userData.subjects[exam.subjectId];
-    final daysUntilDue = Date(exam.startDateTime).differenceInDays(Date.now());
+    final daysUntilDue = Date(exam.startDateTime).differenceInDays(today);
     final dueLabel = relativeDayLabel(daysUntilDue, exam.startDateTime);
     final dueDateColor = daysUntilDue <= 2 ? Colors.orange : null;
     final keys = exam.courseKeys(userData);

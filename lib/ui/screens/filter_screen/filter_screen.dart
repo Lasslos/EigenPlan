@@ -1,6 +1,7 @@
 import 'package:dart_extensions_methods/dart_extension_methods.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/filters.dart';
 import 'package:your_schedule/core/provider/selected_timetable_resource_provider.dart';
 import 'package:your_schedule/core/provider/timetable_provider.dart';
@@ -56,9 +57,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
 
     var session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
     var resource = ref.watch(effectiveTimetableResourceProvider(session));
+    var today = ref.watch(todayProvider);
     if (resource != null) {
       for (var i = -2; i < 3; i++) {
-        ref.listen(timeTableProvider(session, Week.relative(i), resource), (
+        ref.listen(timeTableProvider(session, Week.relativeTo(today, i), resource), (
           _,
           next,
         ) {
@@ -84,7 +86,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
         ? <TimeTableWeek>[]
         : [
             for (var i = -2; i < 3; i++)
-              ref.watch(timeTableProvider(session, Week.relative(i), resource)),
+              ref.watch(timeTableProvider(session, Week.relativeTo(today, i), resource)),
           ];
     var gridEntries = _getRelevantGridEntries(timeTableWeeks);
 
@@ -237,11 +239,12 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     var overrides = resource == null
         ? const <String, bool>{}
         : ref.read(courseOverridesForResourceProvider(resource));
+    var today = ref.read(todayProvider);
     var timeTableWeeks = resource == null
         ? <TimeTableWeek>[]
         : [
             for (var i = -2; i < 3; i++)
-              ref.read(timeTableProvider(session, Week.relative(i), resource)),
+              ref.read(timeTableProvider(session, Week.relativeTo(today, i), resource)),
           ];
     var gridEntries = _getRelevantGridEntries(timeTableWeeks);
 

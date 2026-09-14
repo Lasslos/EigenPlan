@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/exams_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
@@ -21,13 +22,16 @@ class ExamsScreen extends ConsumerStatefulWidget {
 class _ExamsScreenState extends ConsumerState<ExamsScreen> {
   int _weeksShown = _initialWeeksShown;
 
-  List<Week> get _weeks => [for (var i = 0; i < _weeksShown; i++) Week.relative(i)];
+  List<Week> _weeks(Date today) => [for (var i = 0; i < _weeksShown; i++) Week.relativeTo(today, i)];
 
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
-    final weeks = _weeks;
-    final now = DateTime.now();
+    // An exam drops off this list the minute it ends, so the list has to follow the clock
+    // rather than whenever the screen last happened to rebuild.
+    final now = ref.watch(currentMinuteProvider);
+    final today = ref.watch(todayProvider);
+    final weeks = _weeks(today);
 
     final exams = <Exam>[
       for (final week in weeks)
@@ -76,7 +80,7 @@ class _ExamsScreenState extends ConsumerState<ExamsScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                           child: Text(
                             relativeDayLabel(
-                              Date(exam.startDateTime).differenceInDays(Date.now()),
+                              Date(exam.startDateTime).differenceInDays(today),
                               exam.startDateTime,
                             ),
                             style: Theme.of(context).textTheme.titleSmall,

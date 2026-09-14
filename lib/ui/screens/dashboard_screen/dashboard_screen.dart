@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/settings/dashboard_cards_provider.dart';
@@ -21,6 +22,9 @@ class DashboardScreen extends ConsumerWidget {
     final visibility = ref.watch(dashboardCardVisibilityProvider);
     bool isEnabled(DashboardCardType type) => !visibility.contains(type);
     final showMessages = session.loginMode != LoginMode.anonymous && isEnabled(DashboardCardType.messages);
+    // Watched, not read, so the weeks refreshed here stay the same ones [ExamsSummaryCard]
+    // watches once the day rolls over.
+    final today = ref.watch(todayProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Start')),
@@ -28,7 +32,7 @@ class DashboardScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(requestHomeworkProvider(session));
           for (var i = 0; i < _examWeeksWatched; i++) {
-            ref.invalidate(requestExamsProvider(session, Week.relative(i)));
+            ref.invalidate(requestExamsProvider(session, Week.relativeTo(today, i)));
           }
           if (showMessages) {
             ref.invalidate(requestMessagesProvider(session));
@@ -36,7 +40,8 @@ class DashboardScreen extends ConsumerWidget {
           ref.invalidate(requestDashboardCardsProvider(session));
           await Future.wait([
             ref.read(requestHomeworkProvider(session).future),
-            for (var i = 0; i < _examWeeksWatched; i++) ref.read(requestExamsProvider(session, Week.relative(i)).future),
+            for (var i = 0; i < _examWeeksWatched; i++)
+              ref.read(requestExamsProvider(session, Week.relativeTo(today, i)).future),
             if (showMessages) ref.read(requestMessagesProvider(session).future),
             ref.read(requestDashboardCardsProvider(session).future),
           ]);

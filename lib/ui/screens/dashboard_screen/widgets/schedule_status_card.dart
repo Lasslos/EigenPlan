@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/filters.dart';
 import 'package:your_schedule/core/provider/selected_timetable_resource_provider.dart';
 import 'package:your_schedule/core/provider/timetable_provider.dart';
@@ -8,15 +9,8 @@ import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/screens/dashboard_screen/widgets/dashboard_summary_card.dart';
 import 'package:your_schedule/ui/shared/course_chip.dart';
-import 'package:your_schedule/ui/shared/timed_refresh.dart';
 import 'package:your_schedule/util/schedule_status.dart';
 import 'package:your_schedule/utils.dart';
-
-/// How often the countdown/current-vs-next-lesson text re-derives itself from
-/// `DateTime.now()`. Cheap either way (pure in-memory comparisons, no request), but 15s
-/// keeps the minute-precision countdown from visibly lagging behind a real minute
-/// boundary without recomputing on every frame.
-const _refreshInterval = Duration(seconds: 15);
 
 /// "What's happening right now" during school hours (current/next lesson with a
 /// countdown, plus today's cancellations/substitutions/events), or — outside school
@@ -36,38 +30,37 @@ class ScheduleStatusCard extends ConsumerWidget {
     final timeGrid = session.userData.timeGrid;
     final holidays = session.userData.holidays.values;
     final overrides = ref.watch(courseOverridesForResourceProvider(resource));
-    final thisWeek = ref.watch(timeTableProvider(session, Week.now(), resource));
-    final nextWeek = ref.watch(timeTableProvider(session, Week.relative(1), resource));
+    // Both the countdown and the current-vs-next-lesson decision are pure functions of the
+    // clock, so they have to be driven by it — see [currentMinuteProvider].
+    final now = ref.watch(currentMinuteProvider);
+    final date = ref.watch(todayProvider);
+    final thisWeek = ref.watch(timeTableProvider(session, Week.fromDate(date), resource));
+    final nextWeek = ref.watch(timeTableProvider(session, Week.relativeTo(date, 1), resource));
 
-    return TimedRefresh(
-      interval: _refreshInterval,
-      builder: (now, context) {
-        final today = lookupDay(Date.now(), thisWeek, nextWeek);
-        final status = isWithinSchoolHours(timeGrid, now) ? currentOrNextLesson(today, now, overrides) : null;
+    final today = lookupDay(date, thisWeek, nextWeek);
+    final status = isWithinSchoolHours(timeGrid, now) ? currentOrNextLesson(today, now, overrides) : null;
 
-        if (status != null) {
-          return DashboardSummaryCard(
-            title: 'Heute',
-            child: _InSchoolContent(
-              today: today,
-              status: status,
-              overrides: overrides,
-              now: now,
-            ),
-          );
-        }
-        final nextDay = nextSchoolDay(Date.now(), holidays);
-        final nextDayData = nextDay == null ? null : lookupDay(nextDay, thisWeek, nextWeek);
-        return DashboardSummaryCard(
-          title: nextDay == null ? 'Nächster Schultag' : _dayLabel(nextDay),
-          child: _NextDayOverviewContent(
-            hasDay: nextDay != null,
-            dayData: nextDayData,
-            overrides: overrides,
-            lessons: visibleLessonsFor(nextDayData, overrides),
-          ),
-        );
-      },
+    if (status != null) {
+      return DashboardSummaryCard(
+        title: 'Heute',
+        child: _InSchoolContent(
+          today: today,
+          status: status,
+          overrides: overrides,
+          now: now,
+        ),
+      );
+    }
+    final nextDay = nextSchoolDay(date, holidays);
+    final nextDayData = nextDay == null ? null : lookupDay(nextDay, thisWeek, nextWeek);
+    return DashboardSummaryCard(
+      title: nextDay == null ? 'Nächster Schultag' : _dayLabel(nextDay, date),
+      child: _NextDayOverviewContent(
+        hasDay: nextDay != null,
+        dayData: nextDayData,
+        overrides: overrides,
+        lessons: visibleLessonsFor(nextDayData, overrides),
+      ),
     );
   }
 }
@@ -143,13 +136,13 @@ class _LessonStatusTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final remaining = isCurrent ? entry.duration.end.difference(now) : entry.duration.start.difference(now);
-    final minutes = remaining.inMinutes.clamp(0, 999);
+    final target = isCurrent ? entry.duration.end : entry.duration.start;
+    final minutes = minutesLabel(minutesUntil(target, now));
     final countdown = !isCurrent
-        ? 'Beginnt in $minutes Minuten'
+        ? 'Beginnt in $minutes'
         : isLastPeriod
-            ? '$minutes Minuten bis Schulende'
-            : '$minutes Minuten bis zur Pause';
+            ? '$minutes bis Schulende'
+            : '$minutes bis zur Pause';
     final room = _roomName(entry);
 
     return ListTile(
@@ -237,10 +230,10 @@ class _NextDayOverviewContent extends StatelessWidget {
   }
 }
 
-/// "Morgen" when [day] really is the calendar day after today, else its weekday name
+/// "Morgen" when [day] really is the calendar day after [today], else its weekday name
 /// (e.g. "Montag" when the next school day is further out, over a weekend/holiday).
-String _dayLabel(Date day) {
-  if (day.differenceInDays(Date.now()) == 1) {
+String _dayLabel(Date day, Date today) {
+  if (day.differenceInDays(today) == 1) {
     return 'Morgen';
   }
   return day.format(intl.DateFormat('EEEE', 'de'));

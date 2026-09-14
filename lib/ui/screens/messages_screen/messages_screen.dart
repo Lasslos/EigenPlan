@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:your_schedule/core/provider/clock_provider.dart';
 import 'package:your_schedule/core/provider/messages_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/ui/screens/messages_screen/message_detail_screen.dart';
+import 'package:your_schedule/util/date.dart';
 
 class MessagesScreen extends ConsumerWidget {
   const MessagesScreen({super.key});
@@ -13,6 +15,7 @@ class MessagesScreen extends ConsumerWidget {
     final session =
         ref.watch(selectedUntisSessionProvider) as ActiveUntisSession;
     final messages = ref.watch(inboxMessagesProvider(session));
+    final today = ref.watch(todayProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nachrichten')),
@@ -25,7 +28,7 @@ class MessagesScreen extends ConsumerWidget {
           itemCount: messages.incomingMessages.length,
           separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
           itemBuilder: (context, index) {
-            return _MessageTile(msg: messages.incomingMessages[index]);
+            return _MessageTile(msg: messages.incomingMessages[index], today: today);
           },
         ),
       ),
@@ -34,23 +37,10 @@ class MessagesScreen extends ConsumerWidget {
 }
 
 class _MessageTile extends StatelessWidget {
-  const _MessageTile({required this.msg});
+  const _MessageTile({required this.msg, required this.today});
 
   final IncomingMessage msg;
-
-  String _formattedDate(DateTime date) {
-    final now = DateTime.now();
-    final isToday =
-        date.year == now.year && date.month == now.month && date.day == now.day;
-    if (isToday) {
-      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    }
-    final isThisYear = date.year == now.year;
-    if (isThisYear) {
-      return '${date.day}.${date.month.toString().padLeft(2, '0')}.';
-    }
-    return '${date.day}.${date.month.toString().padLeft(2, '0')}.${date.year}';
-  }
+  final Date today;
 
   String _initials(String name) {
     final parts = name
@@ -154,7 +144,7 @@ class _MessageTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  _formattedDate(msg.sentDateTime),
+                  formatMessageTimestamp(msg.sentDateTime, today),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.normal,
