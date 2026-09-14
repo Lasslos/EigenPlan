@@ -36,14 +36,16 @@ class _TimeGridWidgetState extends ConsumerState<TimeGridWidget> {
     TimeOfDay endTime = timeGrid.last.endTime;
     Duration dayDuration = endTime.difference(startTime);
 
-    Duration medianClassDuration = (timeGrid
-        .map((e) => e.length)
-        .toList()
-        ..sort())[timeGrid.length ~/ 2];
+    Duration medianClassDuration = timeGrid.medianPeriodLength;
 
-    // The header is 42 pixels.
+    // A period of median length is exactly `gridCellHeight` pixels tall (default 82),
+    // every other period scales off that. The header is 42 pixels.
 
-    double height = dayDuration.inMinutes / medianClassDuration.inMinutes * ref.watch(gridCellHeightSettingProvider) + 42;
+    double height =
+        dayDuration.inMinutes /
+            medianClassDuration.inMinutes *
+            ref.watch(gridCellHeightSettingProvider) +
+        42;
     height = max(150, height);
 
     return SingleChildScrollView(
@@ -158,51 +160,74 @@ class TimeGridColumnElement extends StatelessWidget {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        children: [
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(width: 8),
-                Text(
-                  entry.startTime.toHHMM(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 8,
-                  ),
-                ),
-                const Spacer(),
-              ],
-            ),
-          ),
-          if (entry.label.isNotEmpty) Text(
-            entry.label,
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-            maxLines: 1,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.clip,
-          ),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Spacer(),
-                Text(
-                  entry.endTime.toHHMM(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 8,
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-            ),
-          ),
-        ],
+    Widget label = Text(
+      entry.label,
+      style: theme.textTheme.labelLarge?.copyWith(
+        fontWeight: FontWeight.bold,
       ),
+      maxLines: 1,
+      textAlign: TextAlign.center,
+      overflow: TextOverflow.clip,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // The cell height is user-configurable (see GridCellHeightSetting) down to a
+        // sliver, and a short period in an otherwise long day is small regardless.
+        // Padding plus the label plus both times need ~48px, so below that drop the
+        // parts that no longer fit — times first, then the label — instead of
+        // overflowing the column.
+        if (constraints.maxHeight < 48) {
+          if (entry.label.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: label,
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            children: [
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(width: 8),
+                    Text(
+                      entry.startTime.toHHMM(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontSize: 8,
+                      ),
+                    ),
+                    const Spacer(),
+                  ],
+                ),
+              ),
+              if (entry.label.isNotEmpty) label,
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Spacer(),
+                    Text(
+                      entry.endTime.toHHMM(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontSize: 8,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
