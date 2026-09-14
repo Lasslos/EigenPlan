@@ -65,34 +65,26 @@ class SettingsScreen extends ConsumerWidget {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: const Text('Höhe'),
-                  content: /*Slider(
-                    value: ref.watch(gridCellHeightSettingProvider).toDouble(),
-                    onChanged: (double value) {
-                      ref.read(gridCellHeightSettingProvider.notifier).setgridCellHeight(value.round());
-                    },
-                    label: ref.watch(gridCellHeightSettingProvider).toString(),
-                    min: 20,
-                    max: 100,
-                  )*/
-                  TextFormField(
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Höhe:'
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    onFieldSubmitted: (String value) {
-                      if (value.isNotEmpty) {
-                        int val = value.toInt();
-                        if (10 <= val && val <= 100) {
-                          ref.read(gridCellHeightSettingProvider.notifier).setGridCellHeight(val);
-                          Navigator.of(context).pop();
+                  content:
+                    TextFormField(
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Höhe:'
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      onFieldSubmitted: (String value) {
+                        if (value.isNotEmpty) {
+                          int val = value.toInt();
+                          if (10 <= val && val <= 100) {
+                            ref.read(gridCellHeightSettingProvider.notifier).setGridCellHeight(val);
+                            Navigator.of(context).pop();
+                          }
                         }
-                      }
-                    },
-                    controller: gridCellHeightController,
-                  ),
+                      },
+                      controller: gridCellHeightController,
+                    ),
                   actions: [
                     TextButton(onPressed: () {
                       Navigator.of(context).pop();
