@@ -5,10 +5,13 @@ import 'package:your_schedule/core/provider/mobile_data_provider.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/settings/dashboard_cards_provider.dart';
+import 'package:your_schedule/settings/grid_cell_height_provider.dart';
 import 'package:your_schedule/settings/sentry_provider.dart';
 import 'package:your_schedule/settings/theme_provider.dart';
 import 'package:your_schedule/ui/screens/filter_screen/filter_screen.dart';
 import 'package:your_schedule/ui/screens/login_screen/welcome_screen.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/widgets/grid_entry_widget.dart';
+import 'package:your_schedule/ui/screens/timetable_screen/widgets/timegrid_widget.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -51,6 +54,16 @@ class SettingsScreen extends ConsumerWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const FilterScreen()),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text('Zeitblock-Höhe'),
+            subtitle: Text('${ref.watch(gridCellHeightSettingProvider)} px'),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => const _GridCellHeightDialog(),
               );
             },
           ),
@@ -305,6 +318,162 @@ class _ProfileAvatar extends ConsumerWidget {
           child: const Icon(Icons.person, color: Colors.white),
         );
       },
+    );
+  }
+}
+
+/// Picks [GridCellHeightSetting] with a slider over a live preview of a single period,
+/// rendered with the real timetable widgets at the height being chosen — a raw pixel
+/// count means nothing on its own, and the preview is what makes it mean something.
+class _GridCellHeightDialog extends ConsumerStatefulWidget {
+  const _GridCellHeightDialog();
+
+  @override
+  ConsumerState<_GridCellHeightDialog> createState() =>
+      _GridCellHeightDialogState();
+}
+
+class _GridCellHeightDialogState extends ConsumerState<_GridCellHeightDialog> {
+  late double _height = ref
+      .read(gridCellHeightSettingProvider)
+      .toDouble();
+
+  void _setHeight(double height) {
+    setState(() => _height = height);
+    ref
+        .read(gridCellHeightSettingProvider.notifier)
+        .setGridCellHeight(height.round());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Zeitblock-Höhe'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Fixed box so only the preview cell grows/shrinks while dragging — the
+          // dialog itself must not resize under the user's finger. Sized for the
+          // largest the preview ever gets: the cell at its maximum, plus the two
+          // 1px dividers _GridCellHeightPreview draws around it.
+          SizedBox(
+            height: gridCellHeightMax + _GridCellHeightPreview.dividerHeight * 2,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: _GridCellHeightPreview(height: _height),
+            ),
+          ),
+          Slider(
+            min: gridCellHeightMin.toDouble(),
+            max: gridCellHeightMax.toDouble(),
+            value: _height,
+            label: '${_height.round()} px',
+            // Only commit once the gesture ends: the preview follows every frame, but
+            // SharedPreferences is written once per drag rather than per pixel.
+            onChanged: (value) => setState(() => _height = value),
+            onChangeEnd: (value) => _setHeight(value),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => _setHeight(gridCellHeightDefault.toDouble()),
+          child: const Text('Standard'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Fertig'),
+        ),
+      ],
+    );
+  }
+}
+
+/// One dummy period rendered exactly the way the timetable renders it, at [height]
+/// pixels. A median-length period is `gridCellHeight` pixels tall in the real grid (see
+/// `timegrid_widget.dart`), so the preview needs no scaling of its own — and it borrows
+/// the user's own median period for the time column, so the times shown are real.
+class _GridCellHeightPreview extends ConsumerWidget {
+  const _GridCellHeightPreview({required this.height});
+
+  final double height;
+
+  /// Thickness of the rules drawn above and below the cell, mirroring the ones the
+  /// real time grid draws around every period.
+  static const double dividerHeight = 1;
+
+  static GridEntryPositionItem _position(
+    String type,
+    String shortName,
+    String longName,
+  ) => GridEntryPositionItem(
+    current: GridEntryPositionElement(
+      type: type,
+      status: 'REGULAR',
+      shortName: shortName,
+      longName: longName,
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    var timeGrid = ref.watch(
+      selectedUntisSessionProvider.select(
+        (value) => (value as ActiveUntisSession).userData.timeGrid,
+      ),
+    );
+    var period = timeGrid.medianPeriod;
+    var day = DateTime.now();
+
+    var entry = GridEntry(
+      duration: GridEntryDuration(
+        start: DateTime(
+          day.year,
+          day.month,
+          day.day,
+          period.startTime.hour,
+          period.startTime.minute,
+        ),
+        end: DateTime(
+          day.year,
+          day.month,
+          day.day,
+          period.endTime.hour,
+          period.endTime.minute,
+        ),
+      ),
+      type: 'NORMAL_TEACHING_PERIOD',
+      status: 'REGULAR',
+      position1: [_position('SUBJECT', 'Mathe', 'Mathematik')],
+      position2: [_position('TEACHER', 'MUS', 'Frau Muster')],
+      position3: [_position('ROOM', 'A101', 'Raum A101')],
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Divider(thickness: 0.7, height: dividerHeight),
+        SizedBox(
+          height: height,
+          child: Row(
+            children: [
+              SizedBox(
+                width: 50,
+                child: TimeGridColumnElement(entry: period),
+              ),
+              const VerticalDivider(width: 1, thickness: 0.7),
+              const SizedBox(width: 4),
+              // The card would otherwise push GridEntryDetailsView out of the dialog.
+              Expanded(
+                child: IgnorePointer(
+                  child: GridEntryWidget(entry: entry, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(thickness: 0.7, height: dividerHeight),
+      ],
     );
   }
 }

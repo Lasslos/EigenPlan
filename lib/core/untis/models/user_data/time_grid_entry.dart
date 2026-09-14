@@ -23,3 +23,15 @@ abstract class TimeGridEntry with _$TimeGridEntry {
             (startTime.hour * 60 + startTime.minute),
       );
 }
+
+extension TimeGridMedian on List<TimeGridEntry> {
+  /// The period whose [TimeGridEntry.length] is the median across the whole time grid —
+  /// deliberately the median and not the mean, so that a single outlier block (e.g. one
+  /// long afternoon double period) can't skew the height every other period is scaled
+  /// against. Throws on an empty grid, like the `first`/`last` accesses that surround
+  /// every call site.
+  TimeGridEntry get medianPeriod =>
+      (toList()..sort((a, b) => a.length.compareTo(b.length)))[length ~/ 2];
+
+  Duration get medianPeriodLength => medianPeriod.length;
+}
