@@ -67,4 +67,17 @@ dart run build_runner build
 ### Release builds
 
 Release APKs (the ones published to GitHub Releases and mirrored by IzzyOnDroid) are built
-with [`tool/build_release_apk.sh`](tool/build_release_apk.sh).
+with [`tool/build_release_apk.sh`](tool/build_release_apk.sh). The script refuses to build
+unless the Flutter SDK matches what `pubspec.yaml` declares, because the Flutter version,
+channel and remote URL are compiled into the APK and a mismatch silently breaks reproducible
+builds.
+
+EigenPlan aims to be reproducible; [`docs/reproducible-builds.md`](docs/reproducible-builds.md)
+documents the exact build environment a rebuilder has to match and explains why each part of it
+matters. [`tool/rb_compare.sh`](tool/rb_compare.sh) builds the APK twice and reports which zip
+entries differ, so reproducibility can be checked locally instead of via a release:
+
+```shell
+tool/rb_compare.sh                            # two builds, identical environment
+tool/rb_compare.sh --second 'taskset -c 0-3'  # vary one thing: the CPU count
+```
