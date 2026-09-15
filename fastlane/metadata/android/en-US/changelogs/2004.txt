@@ -1,0 +1,2 @@
+Bug fixes:
+- Sentry is now configured correctly
