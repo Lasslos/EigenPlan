@@ -1,0 +1,2 @@
+Fehlerbehebung:
+- Sentry ist jetzt korrekt konfiguriert

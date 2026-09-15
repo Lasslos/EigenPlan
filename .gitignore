@@ -63,3 +63,6 @@ test/live/credentials.local.json
 # One-shot marker for the Stop hook's verification level (full vs. light) for the
 # next turn only — ephemeral local state, not project config. See CLAUDE.md.
 .claude/.verify-level
+
+# Working directory of tool/rb_compare.sh (two release APKs plus their unpacked trees).
+/.rb-compare/

@@ -183,33 +183,27 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: ref.watch(sentrySettingsProvider) == true
                 ? const Text('Aktiviert')
                 : const Text('Deaktiviert'),
-            onTap: () {
-              showDialog(
+            onTap: () async {
+              final consent = await showDialog<bool>(
                 context: context,
-                builder: (context) {
+                builder: (dialogContext) {
                   return AlertDialog(
                     title: const Text('Fehlerberichte senden?'),
                     content: const Text(
                       'EigenPlan wird kontinuierlich verbessert. Wir verwenden Sentry, um Fehlerberichte zu sammeln. '
                       'Fehlerberichte helfen uns dabei, Probleme zu erkennen und zu beheben. Dafür benötigen wir jedoch deine Zustimmung. '
-                      'Du kannst deine Zustimmung jederzeit in den Einstellungen wiederrufen. Die Einstellung wird mit einem App-Neustart aktiv. Möchtest du Fehlerberichte senden?',
+                      'Du kannst deine Zustimmung jederzeit in den Einstellungen widerrufen. Möchtest du Fehlerberichte senden?',
                     ),
                     actions: [
                       TextButton(
                         onPressed: () {
-                          ref
-                              .read(sentrySettingsProvider.notifier)
-                              .setSentryEnabled(true);
-                          Navigator.pop(context);
+                          Navigator.pop(dialogContext, true);
                         },
                         child: const Text('Ja'),
                       ),
                       TextButton(
                         onPressed: () {
-                          ref
-                              .read(sentrySettingsProvider.notifier)
-                              .setSentryEnabled(false);
-                          Navigator.pop(context);
+                          Navigator.pop(dialogContext, false);
                         },
                         child: const Text('Nein'),
                       ),
@@ -217,6 +211,10 @@ class SettingsScreen extends ConsumerWidget {
                   );
                 },
               );
+
+              if (consent != null && context.mounted) {
+                await ref.read(sentrySettingsProvider.notifier).setSentryEnabled(consent);
+              }
             },
           ),
           ListTile(

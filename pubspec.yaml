@@ -1,11 +1,11 @@
 name: your_schedule
 description: Filter your Untis Schedule by classes you have chosen.
 
-version: 2.0.3+2003
+version: 2.0.4+2004
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
-  flutter: 3.47.0
+  flutter: 3.47.4
 
 dependencies:
   flutter:
@@ -27,7 +27,7 @@ dependencies:
   dart_extensions_methods: ^2.0.0
   connectivity_plus: ^7.3.1
   animations: ^3.0.0
-  qr_code_scanner_plus: ^2.2.0
+  qr_code_scanner_plus: ^2.3.0
   vibration: ^3.2.1
   url_launcher: ^6.3.2
   path_provider: ^2.1.6

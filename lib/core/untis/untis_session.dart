@@ -1,9 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:your_schedule/core/provider/untis_session_provider.dart';
 import 'package:your_schedule/core/rpc_request/rpc.dart';
 import 'package:your_schedule/core/untis.dart';
 import 'package:your_schedule/util/logger.dart';
@@ -89,7 +87,7 @@ extension ActiveUntisSessionRestAuthHeaders on ActiveUntisSession {
 /// Activates [session], obtaining an app-shared-secret (where applicable) and the
 /// user's master data. [token] is only used for the [LoginMode.password] flow, when
 /// the school requires a 2FA token alongside the password.
-Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, {String token = ''}) async {
+Future<ActiveUntisSession> activateSession(UntisSession session, {String token = ''}) async {
   String? appSharedSecret;
   UserData userData;
 
@@ -120,7 +118,7 @@ Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, 
     rethrow;
   }
 
-  var activeSession = UntisSession.active(
+  return UntisSession.active(
     session.school,
     session.loginMode,
     session.username,
@@ -128,8 +126,6 @@ Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, 
     appSharedSecret,
     userData,
   ) as ActiveUntisSession;
-  ref.read(untisSessionsProvider.notifier).updateSession(session, activeSession);
-  return activeSession;
 }
 
 /// Activates a session for [username]/[password], trying [LoginMode.password] first
@@ -146,7 +142,6 @@ Future<ActiveUntisSession> activateSession(WidgetRef ref, UntisSession session, 
 /// token, no connection, etc. propagate immediately rather than triggering a
 /// pointless retry.
 Future<ActiveUntisSession> activateSessionInferringMode(
-  WidgetRef ref,
   School school,
   String username,
   String password, {
@@ -160,7 +155,7 @@ Future<ActiveUntisSession> activateSessionInferringMode(
   );
 
   try {
-    return await activateSession(ref, passwordSession, token: token);
+    return await activateSession(passwordSession, token: token);
   } on RPCError catch (e) {
     if (e.code != RPCError.authenticationFailed && e.code != RPCError.userLocked) {
       rethrow;
@@ -173,7 +168,7 @@ Future<ActiveUntisSession> activateSessionInferringMode(
       password: password,
     );
     try {
-      return await activateSession(ref, ssoKeySession);
+      return await activateSession(ssoKeySession);
     } on FormatException {
       // The entered value isn't valid Base32, so it can't be a login key either —
       // most passwords aren't, this is expected and not a real error. Report it the
@@ -183,7 +178,7 @@ Future<ActiveUntisSession> activateSessionInferringMode(
   }
 }
 
-Future<ActiveUntisSession> refreshSession(WidgetRef ref, ActiveUntisSession session) async {
+Future<ActiveUntisSession> refreshSession(ActiveUntisSession session) async {
   UserData userData;
   try {
     userData = await requestUserData(session.school, session.authParams);
@@ -191,10 +186,5 @@ Future<ActiveUntisSession> refreshSession(WidgetRef ref, ActiveUntisSession sess
     logRequestError('Error while requesting session data', e, s);
     rethrow;
   }
-  var refreshedSession = session.copyWith(userData: userData);
-  ref.read(untisSessionsProvider.notifier).updateSession(
-    session,
-    refreshedSession,
-  );
-  return refreshedSession;
+  return session.copyWith(userData: userData);
 }

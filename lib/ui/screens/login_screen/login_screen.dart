@@ -282,7 +282,6 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       var session = await activateSessionInferringMode(
-        ref,
         widget.school,
         _usernameFieldController.text,
         _passwordFieldController.text,
@@ -349,7 +348,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     );
 
     try {
-      var activeSession = await activateSession(ref, session);
+      var activeSession = await activateSession(session);
       ref.read(untisSessionsProvider.notifier).addSession(activeSession);
 
       Navigator.pushAndRemoveUntil(

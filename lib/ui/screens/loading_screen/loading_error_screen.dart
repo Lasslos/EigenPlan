@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:your_schedule/core/provider/untis_session_provider.dart';
-import 'package:your_schedule/ui/screens/login_screen/welcome_screen.dart';
+import 'package:your_schedule/util/initialization.dart';
 
 class LoadingErrorScreen extends ConsumerWidget {
   final String message;
@@ -42,26 +42,23 @@ class LoadingErrorScreen extends ConsumerWidget {
                     ),
                     Text(
                       error ?? '',
-                      style: GoogleFonts.lato(fontSize: 12).copyWith(
-                        color: Colors.red
-                      ),
+                      style: GoogleFonts.lato(fontSize: 12)
+                          .copyWith(color: Colors.red),
                       textAlign: TextAlign.center,
                     ),
-                  ]
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
+                onPressed: () => ref.invalidate(appStartupProvider),
+                child: const Text('Erneut versuchen'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
                 onPressed: () {
                   ref.read(untisSessionsProvider.notifier).clearSessions();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) {
-                        return const WelcomeScreen();
-                      },
-                    ),
-                  );
+                  ref.invalidate(appStartupProvider);
                 },
                 child: const Text('Account entfernen und neu anmelden'),
               ),

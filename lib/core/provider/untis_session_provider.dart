@@ -13,6 +13,9 @@ part 'untis_session_provider.g.dart';
 /// anonymous sentinel), which doesn't change across a session's inactive-\>active
 /// transition, unlike anything derived from [ActiveUntisSession.userData].
 String sessionSecretKey(School school, String? username) => '${school.loginName}::${username ?? '#anonymous#'}';
+extension UntisSessionIdentity on UntisSession {
+  String get id => sessionSecretKey(school, username);
+}
 
 /// Populated by [loadSessionsFromDisk] during app startup (see `main.dart`'s
 /// `_initializeApp`), before [UntisSessionsProvider] is ever read. Secrets
@@ -56,10 +59,10 @@ Future<void> loadSessionsFromDisk() async {
   loadedSessions = List.unmodifiable(sessions);
 }
 
-Future<void> _persistSessions(List<UntisSession> sessions) async {
+Future<void> _persistSessions(List<UntisSession> previous, List<UntisSession> sessions) async {
   final jsonList = <String>[];
   for (final session in sessions) {
-    final key = sessionSecretKey(session.school, session.username);
+    final key = session.id;
     if (session.password != null) {
       await secureStorage.write(key: passwordKey(key), value: session.password);
     }
@@ -76,17 +79,34 @@ Future<void> _persistSessions(List<UntisSession> sessions) async {
     };
     jsonList.add(jsonEncode(stripped.toJson()));
   }
+
   await sharedPreferences.setStringList('sessions', jsonList);
+
+  // Erst nach dem erfolgreichen Schreiben der Liste aufräumen, damit ein Absturz
+  // dazwischen keine Session zurücklässt, deren Secrets schon weg sind.
+  final liveIds = sessions.map((e) => e.id).toSet();
+  for (final id in previous.map((e) => e.id).toSet().difference(liveIds)) {
+    await secureStorage.delete(key: passwordKey(id));
+    await secureStorage.delete(key: appSharedSecretKey(id));
+  }
 }
 
 /// The first session is the currently used session.
 @Riverpod(keepAlive: true)
 class UntisSessions extends _$UntisSessions {
+  Future<void> _persistQueue = Future.value();
+
   @override
   List<UntisSession> build() {
     listenSelf((previous, next) {
       if (previous != null && previous != next) {
-        _persistSessions(next);
+        _persistQueue = _persistQueue.then((_) async {
+          try {
+            await _persistSessions(previous, next);
+          } catch (e, s) {
+            getLogger().e('Failed to persist sessions', error: e, stackTrace: s);
+          }
+        });
       }
     });
     return loadedSessions;
@@ -94,10 +114,6 @@ class UntisSessions extends _$UntisSessions {
 
   void addSession(UntisSession session) {
     state = List.unmodifiable([session, ...state]);
-  }
-
-  void removeSession(UntisSession session) {
-    state = List.unmodifiable([...state]..remove(session));
   }
 
   UntisSession? _sessionMarkedForRemoval;
@@ -128,16 +144,18 @@ class UntisSessions extends _$UntisSessions {
     //places the new session in the list at the same index as the old session
     //index of session is preserved
     state = List.unmodifiable(
-      state.map(
-        (e) => e == oldSession ? newSession : e,
-      ),
+      state.map((e) => e.id == oldSession.id ? newSession : e),
     );
+  }
+
+  void removeSession(UntisSession session) {
+    state = List.unmodifiable(state.where((e) => e.id != session.id));
   }
 
   set currentlyUsedSession(UntisSession session) {
     state = List.unmodifiable([
       session,
-      ...[...state]..remove(session),
+      ...state.where((e) => e.id != session.id),
     ]);
   }
 }

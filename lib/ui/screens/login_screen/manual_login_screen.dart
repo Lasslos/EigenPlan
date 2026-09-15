@@ -339,7 +339,6 @@ class _ManualLoginScreenState extends ConsumerState<ManualLoginScreen> {
 
     try {
       var session = await activateSessionInferringMode(
-        ref,
         school,
         _usernameFieldController.text,
         _passwordFieldController.text,
