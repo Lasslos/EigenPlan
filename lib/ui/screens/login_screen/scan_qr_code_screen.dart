@@ -172,7 +172,7 @@ class _ScanQrCodeScreenState extends ConsumerState<ScanQrCodeScreen> {
     );
 
     try {
-      session = await activateSession(ref, session);
+      session = await activateSession(session);
       ref.read(untisSessionsProvider.notifier).addSession(session);
 
       Navigator.pushAndRemoveUntil(
